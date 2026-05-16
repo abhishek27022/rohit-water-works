@@ -428,7 +428,45 @@ function initPayScreen() {
   document.getElementById('qr-sub').textContent = `Pay ₹${state.price + 10}`;
   selPay(state.payment);
 }
+window.useCurrentLocation = function() {
+  const statusEl = document.getElementById('location-status');
 
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Location is not supported on this phone/browser.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+
+  statusEl.textContent = 'Getting your location...';
+  statusEl.style.color = 'var(--amber)';
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      state.customerLat = position.coords.latitude;
+      state.customerLng = position.coords.longitude;
+
+      statusEl.textContent =
+        `Location selected ✓ (${state.customerLat.toFixed(5)}, ${state.customerLng.toFixed(5)})`;
+      statusEl.style.color = 'var(--green)';
+    },
+    function(error) {
+      console.error('Location error:', error);
+
+      if (error.code === 1) {
+        statusEl.textContent = 'Location permission denied. Please allow location access.';
+      } else {
+        statusEl.textContent = 'Unable to get location. Please try again.';
+      }
+
+      statusEl.style.color = 'var(--red)';
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 30000
+    }
+  );
+};
 // Address validation
 window.validateAddr = function() {
   const name = document.getElementById('cust-name').value.trim();
@@ -442,7 +480,13 @@ window.validateAddr = function() {
   if (!addr) return alert('Please enter your delivery address');
 
   state.customer = { name, phone: phone.replace(/\s/g,'').replace('+91','91') };
-  state.address = { full_address: addr, area, landmark };
+  state.address = {
+  full_address: addr,
+  area,
+  landmark,
+  lat: state.customerLat,
+  lng: state.customerLng
+};
   go('s-pay');
 };
 
@@ -575,7 +619,9 @@ async function insertAddress(customerId) {
     label: 'Home',
     full_address: state.address.full_address,
     area: state.address.area,
-    landmark: state.address.landmark
+    landmark: state.address.landmark,
+    lat: state.address.lat,
+    lng: state.address.lng
   }).select().single();
 }
 
