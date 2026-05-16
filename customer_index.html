@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Rohit Water Works — Book a Tanker</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+<!-- Leaflet map library for customer tracking -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1A56DB;--blue-l:#EBF1FF;--water:#0EA5E9;--water-l:#E0F5FF;
+  --green:#16A34A;--green-l:#DCFCE7;--green-d:#166534;
+  --amber:#D97706;--amber-l:#FEF3C7;--amber-d:#92400E;
+  --red:#DC2626;--red-l:#FEE2E2;
+  --dark:#0F172A;--mid:#475569;--soft:#94A3B8;--line:#E2E8F0;--bg:#F8FAFC;--white:#fff;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;max-width:480px;margin:0 auto;color:var(--dark)}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.hero{background:linear-gradient(145deg,var(--blue),var(--water));padding:24px 20px 30px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.07)}
+.hero-greeting{font-size:13px;color:rgba(255,255,255,0.75);margin-bottom:4px}
+.hero-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;line-height:1.2}
+
+.hdr{padding:18px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);background:#fff}
+.back{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.back i{font-size:18px}
+.hdr-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800}
+.hdr-sub{font-size:11px;color:var(--soft);margin-top:1px}
+
+.body{flex:1;padding:18px 0 100px}
+.sec{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--soft);padding:12px 20px 8px}
+
+.slots-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px}
+.slot-card{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:16px;text-align:center;cursor:pointer;transition:all .2s}
+.slot-card:hover{border-color:#85B7EB}
+.slot-card.sel{border-color:var(--blue);background:var(--blue-l)}
+.slot-kl{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--dark)}
+.slot-card.sel .slot-kl{color:var(--blue)}
+.slot-lbl{font-size:11px;color:var(--soft);margin-top:2px}
+.slot-price{font-size:13px;font-weight:700;color:var(--green);margin-top:6px}
+.slot-badge{display:inline-block;font-size:10px;background:var(--amber-l);color:var(--amber-d);padding:2px 8px;border-radius:10px;margin-top:5px}
+
+.time-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 20px}
+.time-btn{padding:11px 6px;border-radius:10px;border:1.5px solid var(--line);background:#fff;text-align:center;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.time-btn.sel{border-color:var(--blue);background:var(--blue-l);color:var(--blue)}
+.time-btn.unavail{opacity:.5;cursor:not-allowed;background:var(--bg);color:var(--soft);border-style:dashed}
+.slot-mini{font-size:10px;font-weight:500;color:var(--soft)}
+.time-btn.sel .slot-mini{color:var(--blue)}
+.time-btn.unavail .slot-mini{color:var(--red)}
+.slot-loading{padding:14px 20px;color:var(--soft);font-size:12px;text-align:center}
+
+.inp{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;background:#fff;outline:none;transition:border .2s}
+.inp:focus{border-color:var(--blue)}
+.inp-l{display:block;font-size:11px;font-weight:700;color:var(--mid);letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px;padding:0 20px}
+.inp-w{padding:0 20px;margin-bottom:14px}
+
+.loc-btn{width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--blue);background:var(--blue-l);color:var(--blue);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.loc-btn:hover{background:#dceaff}
+
+.cta-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--line);padding:14px 20px;z-index:100}
+.cta{width:100%;padding:16px;background:linear-gradient(135deg,var(--blue),var(--water));border:none;border-radius:14px;color:#fff;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.cta:disabled{opacity:.5;cursor:not-allowed}
+
+.pay-opt{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px;cursor:pointer;margin:0 20px 10px;transition:all .2s}
+.pay-opt.sel{border-color:var(--blue);background:var(--blue-l)}
+.pay-opt-ico{width:42px;height:42px;border-radius:11px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.pay-opt-n{font-size:14px;font-weight:600}
+.pay-opt-s{font-size:11px;color:var(--soft);margin-top:1px}
+.radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);margin-left:auto;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pay-opt.sel .radio{border-color:var(--blue)}
+.radio-d{width:9px;height:9px;border-radius:50%;background:var(--blue);display:none}
+.pay-opt.sel .radio-d{display:block}
+
+.amt-box{background:linear-gradient(135deg,var(--blue),var(--water));border-radius:14px;padding:18px 22px;margin:0 20px 16px;text-align:center;color:#fff}
+.amt-lbl{font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:4px}
+.amt-v{font-family:'Syne',sans-serif;font-size:32px;font-weight:800}
+.amt-bk{font-size:11px;color:rgba(255,255,255,0.6);margin-top:4px}
+
+.qr-wrap{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin:0 20px 12px;display:flex;flex-direction:column;align-items:center}
+.qr-apps{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+.qr-app{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:600;color:var(--mid)}
+
+.verify-box{background:var(--amber-l);border:1px solid #FCD34D;border-radius:12px;padding:14px;margin:0 20px 12px}
+.verify-t{font-size:13px;font-weight:600;color:var(--amber-d);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.verify-btn{width:100%;padding:11px;background:var(--amber);border:none;border-radius:8px;color:#fff;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px}
+
+.note{background:var(--blue-l);border-radius:10px;padding:12px 14px;font-size:12px;color:#185FA5;line-height:1.5;display:flex;gap:8px;margin:0 20px}
+.note i{flex-shrink:0;margin-top:1px;font-size:15px;color:var(--blue)}
+
+.sum-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 20px 14px}
+.sum-row{display:flex;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--line);font-size:13px;gap:12px}
+.sum-row:last-child{border-bottom:none}
+.sum-k{color:var(--soft)}
+.sum-v{font-weight:500;text-align:right}
+.sum-total{background:var(--blue-l);display:flex;justify-content:space-between;align-items:center;padding:14px 16px}
+.sum-tl{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--blue)}
+.sum-ta{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--blue)}
+
+.success{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
+.suc-ico{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.suc-ico i{font-size:36px}
+.suc-t{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px}
+.suc-s{font-size:13px;color:var(--soft);margin-bottom:20px;line-height:1.6}
+
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:14px}
+.status-pill.wait{background:var(--amber-l);color:var(--amber-d)}
+.status-pill.ok{background:var(--green-l);color:var(--green-d)}
+.dot-blink{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.book-id-box{background:var(--green-l);border-radius:12px;padding:14px 20px;margin-bottom:14px;width:100%}
+.book-id-l{font-size:11px;color:var(--green-d);margin-bottom:3px}
+.book-id-v{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--green-d);letter-spacing:1px}
+
+.track-card{background:#fff;border:1px solid var(--line);border-radius:14px;margin:0 20px 14px;padding:14px}
+.track-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:6px}
+.track-line{font-size:12px;color:var(--mid);margin-top:4px;line-height:1.4}
+#customer-track-map{height:340px;width:calc(100% - 40px);margin:0 20px 14px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#E2E8F0}
+.track-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 20px}
+.track-btn{padding:13px;border-radius:12px;border:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.track-btn.primary{background:var(--blue);color:white}
+.track-btn.light{background:var(--blue-l);color:var(--blue)}
+.marker-truck{font-size:28px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.marker-home{font-size:25px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+.connection-warn{background:#1C1A0A;border:1px solid #92400E;color:#FBBF24;padding:10px 16px;font-size:12px;text-align:center;font-weight:500}
+</style>
+</head>
+<body>
+
+<div id="connection-warn" class="connection-warn" style="display:none">⚙️ Demo mode — update Supabase keys in source to enable real bookings</div>
+
+<!-- HOME -->
+<div class="screen active" id="s-home">
+  <div class="hero">
+    <div class="hero-greeting">Good morning 👋 Shamshabad</div>
+    <div class="hero-title">Rohit Water Works<br>Book your tanker</div>
+  </div>
+  <div class="body">
+    <div class="sec">Book a tanker</div>
+    <div class="slots-g">
+      <div class="slot-card sel" onclick="selSlot(5, 700); go('s-time')">
+        <div class="slot-kl">5 KL</div>
+        <div class="slot-lbl">5,000 litres</div>
+        <div class="slot-price">₹700</div>
+        <div class="slot-badge">Most popular</div>
+      </div>
+      <div class="slot-card" onclick="selSlot(10, 1200); go('s-time')">
+        <div class="slot-kl">10 KL</div>
+        <div class="slot-lbl">10,000 litres</div>
+        <div class="slot-price">₹1,200</div>
+      </div>
+    </div>
+
+    <div class="sec">Your bookings</div>
+    <div id="my-bookings" style="margin:0 20px"></div>
+  </div>
+</div>
+
+<!-- SELECT TIME -->
+<div class="screen" id="s-time">
+  <div class="hdr">
+    <div class="back" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></div>
+    <div><div class="hdr-title">Date & Time</div><div class="hdr-sub" id="time-sub">5 KL · ₹700</div></div>
+  </div>
+  <div class="body">
+    <div class="sec">Pick a date</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:0 20px;margin-bottom:10px" id="dates-grid"></div>
+    <div class="sec">Pick a time slot</div>
+    <div id="slot-check-note" class="slot-loading">Checking slot availability...</div>
+    <div class="time-g" id="times-grid"></div>
+    <div style="height:14px"></div>
+    <div class="note"><i class="ti ti-info-circle"></i><span id="slot-info-text">Slots are checked against active trucks of the selected tanker size. Full slots are disabled automatically.</span></div>
+  </div>
+  <div class="cta-bar"><button class="cta" onclick="continueFromTime()">Continue <i class="ti ti-arrow-right"></i></button></div>
+</div>
+
+<!-- ADDRESS -->
+<div class="screen" id="s-addr">
+  <div class="hdr">
+    <div class="back" onclick="go('s-time')"><i class="ti ti-arrow-left"></i></div>
+    <div><div class="hdr-title">Delivery Details</div><div class="hdr-sub">Where should the tanker come?</div></div>
+  </div>
+  <div class="body">
+    <label class="inp-l">Your name</label>
+    <div class="inp-w"><input class="inp" id="cust-name" placeholder="Full name" /></div>
+
+    <label class="inp-l">Phone number</label>
+    <div class="inp-w"><input class="inp" id="cust-phone" type="tel" placeholder="+91 98XXXXXXXX" /></div>
+
+    <label class="inp-l">Delivery address</label>
+    <div class="inp-w">
+      <textarea class="inp" id="cust-addr" rows="3" placeholder="Plot, street, area in Shamshabad..."></textarea>
+    </div>
+
+    <div class="inp-w">
+      <button type="button" class="loc-btn" onclick="useCurrentLocation()">
+        <i class="ti ti-current-location"></i>
+        Use my current location
+      </button>
+      <div id="location-status" style="font-size:11px;color:var(--soft);margin-top:6px">
+        Location not selected yet
+      </div>
+    </div>
+
+    <label class="inp-l">Area</label>
+    <div class="inp-w">
+      <select class="inp" id="cust-area">
+        <option value="Rajiv Nagar">Rajiv Nagar</option>
+        <option value="Maheshwaram Road">Maheshwaram Road</option>
+        <option value="Shamshabad Town">Shamshabad Town</option>
+        <option value="Kismatpur">Kismatpur</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <label class="inp-l">Landmark / notes for driver (optional)</label>
+    <div class="inp-w"><input class="inp" id="cust-landmark" placeholder="e.g. Near blue gate, 3rd house" /></div>
+  </div>
+  <div class="cta-bar"><button class="cta" onclick="validateAddr()">Continue to payment <i class="ti ti-arrow-right"></i></button></div>
+</div>
+
+<!-- PAYMENT -->
+<div class="screen" id="s-pay">
+  <div class="hdr">
+    <div class="back" onclick="go('s-addr')"><i class="ti ti-arrow-left"></i></div>
+    <div><div class="hdr-title">Payment</div><div class="hdr-sub">Review & pay</div></div>
+  </div>
+  <div class="body">
+    <div class="sum-card">
+      <div class="sum-row"><span class="sum-k">Tanker size</span><span class="sum-v" id="sum-size">5 KL</span></div>
+      <div class="sum-row"><span class="sum-k">Date & time</span><span class="sum-v" id="sum-time">—</span></div>
+      <div class="sum-row"><span class="sum-k">Location</span><span class="sum-v" id="sum-area">—</span></div>
+      <div class="sum-row"><span class="sum-k">Base price</span><span class="sum-v" id="sum-base">₹700</span></div>
+      <div class="sum-row"><span class="sum-k">Platform fee</span><span class="sum-v">₹10</span></div>
+      <div class="sum-total"><span class="sum-tl">Total</span><span class="sum-ta" id="sum-total">₹710</span></div>
+    </div>
+
+    <div class="sec">Choose payment method</div>
+    <div class="pay-opt sel" id="po-upi" onclick="selPay('upi')">
+      <div class="pay-opt-ico">₹</div>
+      <div><div class="pay-opt-n">UPI / QR Code</div><div class="pay-opt-s">GPay, PhonePe, Paytm — instant</div></div>
+      <div class="radio"><div class="radio-d"></div></div>
+    </div>
+    <div class="pay-opt" id="po-cod" onclick="selPay('cod')">
+      <div class="pay-opt-ico">💵</div>
+      <div><div class="pay-opt-n">Cash on delivery</div><div class="pay-opt-s">Pay driver on arrival</div></div>
+      <div class="radio"><div class="radio-d"></div></div>
+    </div>
+  </div>
+  <div class="cta-bar"><button class="cta" id="pay-cta" onclick="proceedPay()">Scan QR & pay ₹710 <i class="ti ti-arrow-right"></i></button></div>
+</div>
+
+<!-- QR / COD -->
+<div class="screen" id="s-qr">
+  <div class="hdr">
+    <div class="back" onclick="go('s-pay')"><i class="ti ti-arrow-left"></i></div>
+    <div><div class="hdr-title" id="qr-title">Scan to Pay</div><div class="hdr-sub" id="qr-sub">Pay ₹710</div></div>
+  </div>
+  <div class="body">
+    <div id="upi-section">
+      <div class="amt-box">
+        <div class="amt-lbl">Pay this amount</div>
+        <div class="amt-v" id="qr-amt">₹710</div>
+      </div>
+      <div class="qr-wrap">
+        <svg width="180" height="180" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="44" height="44" rx="4" fill="none" stroke="#0F172A" stroke-width="5"/>
+          <rect x="15" y="15" width="22" height="22" rx="2" fill="#0F172A"/>
+          <rect x="112" y="4" width="44" height="44" rx="4" fill="none" stroke="#0F172A" stroke-width="5"/>
+          <rect x="123" y="15" width="22" height="22" rx="2" fill="#0F172A"/>
+          <rect x="4" y="112" width="44" height="44" rx="4" fill="none" stroke="#0F172A" stroke-width="5"/>
+          <rect x="15" y="123" width="22" height="22" rx="2" fill="#0F172A"/>
+          <g fill="#0F172A">
+            <rect x="56" y="4" width="7" height="7"/><rect x="78" y="4" width="7" height="7"/><rect x="67" y="15" width="7" height="7"/>
+            <rect x="56" y="26" width="7" height="7"/><rect x="78" y="26" width="7" height="7"/><rect x="56" y="37" width="7" height="7"/>
+            <rect x="4" y="56" width="7" height="7"/><rect x="26" y="56" width="7" height="7"/><rect x="56" y="56" width="7" height="7"/><rect x="78" y="56" width="7" height="7"/><rect x="100" y="56" width="7" height="7"/>
+            <rect x="15" y="67" width="7" height="7"/><rect x="56" y="67" width="7" height="7"/><rect x="89" y="67" width="7" height="7"/><rect x="123" y="67" width="7" height="7"/>
+            <rect x="56" y="78" width="7" height="7"/><rect x="78" y="78" width="7" height="7"/><rect x="100" y="78" width="7" height="7"/>
+            <rect x="4" y="89" width="7" height="7"/><rect x="67" y="89" width="7" height="7"/><rect x="112" y="89" width="7" height="7"/>
+            <rect x="56" y="100" width="7" height="7"/><rect x="78" y="100" width="7" height="7"/><rect x="100" y="100" width="7" height="7"/>
+            <rect x="67" y="112" width="7" height="7"/><rect x="89" y="112" width="7" height="7"/><rect x="123" y="112" width="7" height="7"/>
+            <rect x="56" y="123" width="7" height="7"/><rect x="78" y="123" width="7" height="7"/><rect x="100" y="123" width="7" height="7"/>
+            <rect x="67" y="134" width="7" height="7"/><rect x="89" y="134" width="7" height="7"/>
+          </g>
+        </svg>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-top:14px">Rohit Water Works</div>
+        <div style="font-size:11px;color:var(--soft);margin-bottom:10px">UPI: rohitwaterworks@ybl</div>
+        <div class="qr-apps"><span class="qr-app">GPay</span><span class="qr-app">PhonePe</span><span class="qr-app">Paytm</span><span class="qr-app">BHIM</span></div>
+      </div>
+      <div class="verify-box">
+        <div class="verify-t"><i class="ti ti-receipt"></i> Enter UPI transaction ID after paying</div>
+        <input class="inp" id="txn-inp" placeholder="e.g. 406789234561" />
+        <button class="verify-btn" onclick="submitTxn()">Submit — confirm my booking</button>
+      </div>
+      <div class="note"><i class="ti ti-bolt"></i><span>Auto-verified usually under 2 minutes. We match your transaction ID with the bank credit notification.</span></div>
+    </div>
+
+    <div id="cod-section" style="display:none">
+      <div style="background:var(--amber-l);border:1px solid #FCD34D;border-radius:14px;padding:20px;text-align:center;margin:0 20px 14px">
+        <div style="font-size:12px;color:var(--amber-d);margin-bottom:6px">Keep ready for driver</div>
+        <div style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--amber)" id="cod-amt">₹700</div>
+        <div style="font-size:11px;color:var(--amber-d);margin-top:4px">Cash · exact change preferred</div>
+      </div>
+      <div class="note"><i class="ti ti-info-circle"></i><span>Booking confirmed. Driver will arrive at your scheduled time. Keep cash ready at the gate.</span></div>
+      <div style="height:14px"></div>
+      <div style="padding:0 20px"><button class="cta" onclick="createCodBooking()">Confirm cash booking <i class="ti ti-check"></i></button></div>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div class="screen" id="s-wait">
+  <div class="success">
+    <div class="suc-ico" style="background:var(--amber-l)"><i class="ti ti-clock" style="color:var(--amber)"></i></div>
+    <div class="suc-t">Payment submitted!</div>
+    <div class="suc-s">We're verifying your UPI payment.<br>Usually under 2 minutes.</div>
+    <div class="status-pill wait"><div class="dot-blink"></div> Verifying payment...</div>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;width:100%;text-align:left">
+      <div style="font-size:10px;color:var(--soft);margin-bottom:3px;text-transform:uppercase">Transaction ID</div>
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="wait-txn">—</div>
+      <div style="height:1px;background:var(--line);margin:8px 0"></div>
+      <div style="font-size:10px;color:var(--soft);margin-bottom:3px;text-transform:uppercase">Amount</div>
+      <div style="font-size:13px;font-weight:600" id="wait-amt">₹710</div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRMED -->
+<div class="screen" id="s-confirmed">
+  <div class="success">
+    <div class="suc-ico" style="background:var(--green-l)"><i class="ti ti-check" style="color:var(--green)"></i></div>
+    <div class="suc-t">Booking confirmed!</div>
+    <div class="suc-s" id="conf-sub">Driver will be assigned shortly</div>
+    <div class="book-id-box">
+      <div class="book-id-l">YOUR BOOKING ID</div>
+      <div class="book-id-v" id="conf-id">#RW—</div>
+    </div>
+    <button class="cta" onclick="openTrack(state.bookingId)" style="width:100%;margin-bottom:10px">
+      <i class="ti ti-map-pin"></i> Track my tanker
+    </button>
+    <button class="cta" onclick="go('s-home'); loadMyBookings()" style="width:100%;background:#64748B">
+      <i class="ti ti-home"></i> Back to home
+    </button>
+  </div>
+</div>
+
+<!-- TRACK TANKER -->
+<div class="screen" id="s-track">
+  <div class="hdr">
+    <div class="back" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></div>
+    <div>
+      <div class="hdr-title">Track Your Tanker</div>
+      <div class="hdr-sub" id="track-sub">Live delivery status</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="track-card">
+      <div class="track-title" id="track-status-title">Loading booking...</div>
+      <div class="track-line" id="track-booking-line">Please wait</div>
+      <div class="track-line" id="track-driver-line">Driver details will appear here</div>
+      <div class="track-line" id="track-payment-line">Payment details will appear here</div>
+    </div>
+
+    <div id="customer-track-map"></div>
+
+    <div class="track-actions">
+      <a class="track-btn primary" id="call-driver-btn" href="#" style="pointer-events:none;opacity:.5">Call Driver</a>
+      <button class="track-btn light" onclick="loadTrackScreen()">Refresh Location</button>
+    </div>
+
+    <div style="height:16px"></div>
+    <div class="note">
+      <i class="ti ti-info-circle"></i>
+      <span>Live location works after a driver is assigned and the driver allows location access in the driver app.</span>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Supabase values for Rohit Water Works customer app
+const SUPABASE_URL = 'https://cwrpxrtukhmpngfbkpuz.supabase.co';
+const SUPABASE_KEY = 'REPLACE_WITH_YOUR_SUPABASE_ANON_KEY';
+
+const isDemo = SUPABASE_URL.includes('YOUR_PROJECT') || SUPABASE_KEY.includes('REPLACE_WITH');
+if (isDemo) document.getElementById('connection-warn').style.display = 'block';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// State
+let state = {
+  kl: 5,
+  price: 700,
+  date: 0,
+  time: '10 AM',
+  payment: 'upi',
+  customer: null,
+  address: null,
+  bookingId: null,
+  trackingBookingId: null,
+  customerLat: null,
+  customerLng: null,
+  slotAvailability: {},
+  slotCapacity: 0
+};
+
+// Tracking map state
+let customerTrackMap = null;
+let customerMarkers = {};
+let trackingInterval = null;
+const SHAMSHABAD_CENTER = [17.2512, 78.4377];
+const TIME_SLOTS = ['8 AM','10 AM','12 PM','2 PM','4 PM','6 PM'];
+const ACTIVE_SLOT_STATUSES = ['pending', 'assigned', 'in_progress', 'completed'];
+
+// Navigation
+window.go = function(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+
+  if (id === 's-time') initTimeScreen();
+  if (id === 's-pay') initPayScreen();
+  if (id === 's-track') loadTrackScreen();
+
+  if (id !== 's-track' && trackingInterval) {
+    clearInterval(trackingInterval);
+    trackingInterval = null;
+  }
+};
+
+// Selectors
+window.selSlot = function(kl, price) {
+  state.kl = kl;
+  state.price = price;
+  state.slotAvailability = {};
+  document.getElementById('time-sub').textContent = `${kl} KL · ₹${price}`;
+};
+
+window.selPay = function(p) {
+  state.payment = p;
+  document.getElementById('po-upi').classList.toggle('sel', p === 'upi');
+  document.getElementById('po-cod').classList.toggle('sel', p === 'cod');
+  const label = p === 'upi' ? `Scan QR & pay ₹${state.price + 10}` : 'Confirm cash booking';
+  document.getElementById('pay-cta').innerHTML = `${label} <i class="ti ti-arrow-right"></i>`;
+};
+
+// Time screen with slot availability
+async function initTimeScreen() {
+  buildDatePills();
+  await loadSlotAvailabilityForDate();
+  buildTimeSlots();
+}
+
+function buildDatePills() {
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const today = new Date();
+  let html = '';
+
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const cls = i === state.date ? 'sel' : '';
+    html += `<div class="slot-card ${cls}" style="padding:10px 4px" onclick="selDate(${i})">
+      <div style="font-size:9px;color:var(--soft)">${days[d.getDay()]}</div>
+      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800">${d.getDate()}</div>
+    </div>`;
+  }
+
+  document.getElementById('dates-grid').innerHTML = html;
+}
+
+async function loadSlotAvailabilityForDate() {
+  const note = document.getElementById('slot-check-note');
+  note.textContent = 'Checking slot availability...';
+  note.style.display = 'block';
+
+  if (isDemo) {
+    state.slotCapacity = 3;
+    state.slotAvailability = Object.fromEntries(TIME_SLOTS.map(t => [t, { booked: 0, capacity: 3, available: true }]));
+    note.textContent = 'Demo: slots available';
+    return;
+  }
+
+  try {
+    const date = getScheduledDate();
+
+    const { count: driverCount, error: driverErr } = await supabase
+      .from('drivers')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .eq('vehicle_capacity_kl', state.kl);
+
+    if (driverErr) throw driverErr;
+
+    const capacity = driverCount || 0;
+    state.slotCapacity = capacity;
+
+    const { data: bookings, error: bookingErr } = await supabase
+      .from('bookings')
+      .select('scheduled_time, booking_status')
+      .eq('scheduled_date', date)
+      .eq('tanker_size_kl', state.kl)
+      .in('booking_status', ACTIVE_SLOT_STATUSES);
+
+    if (bookingErr) throw bookingErr;
+
+    const counts = {};
+    (bookings || []).forEach(b => {
+      const label = time24ToLabel(b.scheduled_time);
+      counts[label] = (counts[label] || 0) + 1;
+    });
+
+    state.slotAvailability = {};
+    TIME_SLOTS.forEach(t => {
+      const booked = counts[t] || 0;
+      state.slotAvailability[t] = {
+        booked,
+        capacity,
+        available: capacity > 0 && booked < capacity
+      };
+    });
+
+    const availableCount = Object.values(state.slotAvailability).filter(s => s.available).length;
+    note.textContent = capacity === 0
+      ? `No ${state.kl} KL trucks configured yet. Please contact Rohit Water Works.`
+      : `${availableCount} slots available for ${state.kl} KL. Full slots are disabled.`;
+  } catch (err) {
+    console.error('Slot availability error:', err);
+    note.textContent = 'Could not check slots. You can continue, but we will re-check before confirming.';
+  }
+}
+
+function buildTimeSlots() {
+  document.getElementById('times-grid').innerHTML = TIME_SLOTS.map(t => {
+    const s = state.slotAvailability[t] || { booked: 0, capacity: 0, available: true };
+    const selected = t === state.time ? 'sel' : '';
+    const unavail = !s.available ? 'unavail' : '';
+    const mini = s.capacity > 0
+      ? (s.available ? `${Math.max(s.capacity - s.booked, 0)} left` : 'Full')
+      : 'Check';
+
+    return `<div class="time-btn ${selected} ${unavail}" onclick="selTime('${t}')">
+      <span>${t}</span><span class="slot-mini">${mini}</span>
+    </div>`;
+  }).join('');
+}
+
+window.selDate = async function(i) {
+  state.date = i;
+  buildDatePills();
+  await loadSlotAvailabilityForDate();
+  if (!isTimeSlotAvailable(state.time)) {
+    const firstAvailable = TIME_SLOTS.find(t => isTimeSlotAvailable(t));
+    if (firstAvailable) state.time = firstAvailable;
+  }
+  buildTimeSlots();
+};
+
+window.selTime = function(t) {
+  if (!isTimeSlotAvailable(t)) {
+    alert(`Sorry, ${t} is fully booked for ${state.kl} KL. Please choose another slot.`);
+    return;
+  }
+  state.time = t;
+  buildTimeSlots();
+};
+
+function isTimeSlotAvailable(t) {
+  const s = state.slotAvailability[t];
+  if (!s) return true;
+  return s.available;
+}
+
+window.continueFromTime = async function() {
+  await loadSlotAvailabilityForDate();
+  buildTimeSlots();
+  if (!isTimeSlotAvailable(state.time)) {
+    alert(`Selected slot ${state.time} is now fully booked. Please choose another slot.`);
+    return;
+  }
+  go('s-addr');
+};
+
+// Pay screen
+function initPayScreen() {
+  const days = ['Today','Tomorrow','Day after','In 3 days','In 4 days'];
+  document.getElementById('sum-size').textContent = `${state.kl} KL (${state.kl * 1000} L)`;
+  document.getElementById('sum-time').textContent = `${days[state.date]}, ${state.time}`;
+  document.getElementById('sum-area').textContent = state.address?.area || '—';
+  document.getElementById('sum-base').textContent = `₹${state.price}`;
+  document.getElementById('sum-total').textContent = `₹${state.price + 10}`;
+  document.getElementById('qr-amt').textContent = `₹${state.price + 10}`;
+  document.getElementById('cod-amt').textContent = `₹${state.price}`;
+  document.getElementById('wait-amt').textContent = `₹${state.price + 10}`;
+  document.getElementById('qr-sub').textContent = `Pay ₹${state.price + 10}`;
+  selPay(state.payment);
+}
+
+// Location capture
+window.useCurrentLocation = function() {
+  const statusEl = document.getElementById('location-status');
+
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Location is not supported on this phone/browser.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+
+  statusEl.textContent = 'Getting your location...';
+  statusEl.style.color = 'var(--amber)';
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      state.customerLat = position.coords.latitude;
+      state.customerLng = position.coords.longitude;
+
+      statusEl.textContent =
+        `Location selected ✓ (${state.customerLat.toFixed(5)}, ${state.customerLng.toFixed(5)})`;
+      statusEl.style.color = 'var(--green)';
+    },
+    function(error) {
+      console.error('Location error:', error);
+      statusEl.textContent = error.code === 1
+        ? 'Location permission denied. Please allow location access.'
+        : 'Unable to get location. Please try again.';
+      statusEl.style.color = 'var(--red)';
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 30000
+    }
+  );
+};
+
+// Address validation
+window.validateAddr = function() {
+  const name = document.getElementById('cust-name').value.trim();
+  const phone = document.getElementById('cust-phone').value.trim();
+  let addr = document.getElementById('cust-addr').value.trim();
+  const area = document.getElementById('cust-area').value;
+  const landmark = document.getElementById('cust-landmark').value.trim();
+
+  if (!name) return alert('Please enter your name');
+  if (!phone || phone.replace(/\D/g, '').length < 10) return alert('Please enter a valid phone number');
+
+  if (!addr && state.customerLat && state.customerLng) {
+    addr = 'Current location shared by customer';
+  }
+
+  if (!addr) {
+    return alert('Please enter your delivery address or tap "Use my current location".');
+  }
+
+  state.customer = { name, phone: normalizePhone(phone) };
+  localStorage.setItem('customer_phone', state.customer.phone);
+
+  state.address = {
+    full_address: addr,
+    area,
+    landmark,
+    lat: state.customerLat,
+    lng: state.customerLng
+  };
+
+  go('s-pay');
+};
+
+// Payment flows
+window.proceedPay = function() {
+  if (state.payment === 'upi') {
+    document.getElementById('upi-section').style.display = 'block';
+    document.getElementById('cod-section').style.display = 'none';
+    document.getElementById('qr-title').textContent = 'Scan to Pay';
+  } else {
+    document.getElementById('upi-section').style.display = 'none';
+    document.getElementById('cod-section').style.display = 'block';
+    document.getElementById('qr-title').textContent = 'Cash on Delivery';
+  }
+  go('s-qr');
+};
+
+async function checkSlotStillAvailable() {
+  if (isDemo) return true;
+  await loadSlotAvailabilityForDate();
+  buildTimeSlots();
+  if (!isTimeSlotAvailable(state.time)) {
+    alert(`Sorry, ${state.time} just got fully booked. Please choose another slot.`);
+    go('s-time');
+    return false;
+  }
+  return true;
+}
+
+// UPI booking
+window.submitTxn = async function() {
+  const txn = document.getElementById('txn-inp').value.trim();
+  if (!txn) return alert('Please enter your UPI transaction ID');
+  if (!(await checkSlotStillAvailable())) return;
+
+  document.getElementById('wait-txn').textContent = txn;
+  go('s-wait');
+
+  if (isDemo) {
+    setTimeout(() => {
+      state.bookingId = Math.floor(Math.random() * 9000) + 1000;
+      document.getElementById('conf-id').textContent = `#RW${state.bookingId}`;
+      go('s-confirmed');
+    }, 1500);
+    return;
+  }
+
+  try {
+    const { data: cust } = await upsertCustomer();
+    const { data: addr } = await insertAddress(cust.id);
+
+    const { data: booking, error } = await supabase
+      .from('bookings')
+      .insert({
+        customer_id: cust.id,
+        address_id: addr.id,
+        tanker_size_kl: state.kl,
+        scheduled_date: getScheduledDate(),
+        scheduled_time: timeStrTo24h(state.time),
+        base_price: state.price,
+        platform_fee: 10,
+        total_amount: state.price + 10,
+        payment_method: 'upi',
+        payment_status: 'verifying',
+        upi_transaction_id: txn,
+        booking_status: 'pending',
+        customer_notes: state.address.landmark
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    state.bookingId = booking.id;
+    state.trackingBookingId = booking.id;
+
+    await supabase.from('upi_payments').insert({
+      booking_id: booking.id,
+      transaction_id: txn,
+      amount: state.price + 10,
+      status: 'pending'
+    });
+
+    pollVerification(booking.id);
+  } catch (err) {
+    alert('Error: ' + err.message);
+    go('s-pay');
+  }
+};
+
+// COD booking
+window.createCodBooking = async function() {
+  if (!(await checkSlotStillAvailable())) return;
+
+  if (isDemo) {
+    state.bookingId = Math.floor(Math.random() * 9000) + 1000;
+    document.getElementById('conf-id').textContent = `#RW${state.bookingId}`;
+    document.getElementById('conf-sub').textContent = 'Driver will arrive at scheduled time. Keep cash ready.';
+    go('s-confirmed');
+    return;
+  }
+
+  try {
+    const { data: cust } = await upsertCustomer();
+    const { data: addr } = await insertAddress(cust.id);
+
+    const { data: booking, error } = await supabase
+      .from('bookings')
+      .insert({
+        customer_id: cust.id,
+        address_id: addr.id,
+        tanker_size_kl: state.kl,
+        scheduled_date: getScheduledDate(),
+        scheduled_time: timeStrTo24h(state.time),
+        base_price: state.price,
+        platform_fee: 10,
+        total_amount: state.price + 10,
+        payment_method: 'cod',
+        payment_status: 'pending',
+        booking_status: 'pending',
+        customer_notes: state.address.landmark
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    state.bookingId = booking.id;
+    state.trackingBookingId = booking.id;
+
+    document.getElementById('conf-id').textContent = `#RW${booking.id}`;
+    document.getElementById('conf-sub').textContent = 'Driver will arrive at scheduled time. Keep cash ready.';
+    go('s-confirmed');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+};
+
+// Helpers
+function normalizePhone(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('91') && digits.length === 12) return digits;
+  return '91' + digits.slice(-10);
+}
+
+async function upsertCustomer() {
+  const { data: existing, error: findError } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('phone', state.customer.phone)
+    .maybeSingle();
+
+  if (findError) throw findError;
+  if (existing) return { data: existing };
+
+  const { data, error } = await supabase
+    .from('customers')
+    .insert(state.customer)
+    .select()
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Customer was not created. Check Supabase permissions.');
+
+  return { data };
+}
+
+async function insertAddress(customerId) {
+  if (!customerId) throw new Error('Customer ID missing. Customer creation failed.');
+
+  const { data, error } = await supabase.from('addresses').insert({
+    customer_id: customerId,
+    label: 'Home',
+    full_address: state.address.full_address,
+    area: state.address.area,
+    landmark: state.address.landmark,
+    lat: state.address.lat,
+    lng: state.address.lng
+  }).select().single();
+
+  if (error) throw error;
+  if (!data) throw new Error('Address was not created. Check Supabase permissions.');
+
+  return { data };
+}
+
+function getScheduledDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + state.date);
+  return d.toISOString().slice(0, 10);
+}
+
+function timeStrTo24h(t) {
+  const [h, period] = t.split(' ');
+  let hour = parseInt(h);
+  if (period === 'PM' && hour !== 12) hour += 12;
+  return `${String(hour).padStart(2,'0')}:00:00`;
+}
+
+function time24ToLabel(t) {
+  if (!t) return '';
+  const [h] = String(t).split(':');
+  const hour = parseInt(h);
+  const display = hour > 12 ? hour - 12 : hour;
+  return `${display} ${hour < 12 ? 'AM' : 'PM'}`;
+}
+
+function formatTime(t) {
+  if (!t) return '—';
+  const [h, m] = String(t).split(':');
+  const hour = parseInt(h);
+  return `${hour > 12 ? hour - 12 : hour}:${m || '00'} ${hour < 12 ? 'AM' : 'PM'}`;
+}
+
+async function pollVerification(bookingId) {
+  const channel = supabase
+    .channel(`booking-${bookingId}`)
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `id=eq.${bookingId}` },
+      (payload) => {
+        if (payload.new.payment_status === 'paid') {
+          document.getElementById('conf-id').textContent = `#RW${bookingId}`;
+          state.bookingId = bookingId;
+          state.trackingBookingId = bookingId;
+          go('s-confirmed');
+          channel.unsubscribe();
+        }
+      }
+    )
+    .subscribe();
+
+  setTimeout(() => {
+    channel.unsubscribe();
+    alert('Verification taking longer than usual. Please check with us on WhatsApp.');
+  }, 180000);
+}
+
+// Tracking map
+function initCustomerTrackMap() {
+  if (customerTrackMap) {
+    setTimeout(() => customerTrackMap.invalidateSize(), 300);
+    return;
+  }
+
+  if (!window.L) return;
+
+  customerTrackMap = L.map('customer-track-map').setView(SHAMSHABAD_CENTER, 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(customerTrackMap);
+
+  setTimeout(() => customerTrackMap.invalidateSize(), 300);
+}
+
+function makeEmojiIcon(emoji, className) {
+  return L.divIcon({
+    html: `<div class="${className}">${emoji}</div>`,
+    className: '',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18]
+  });
+}
+
+function updateCustomerMarker(key, lat, lng, emoji, className, popupText) {
+  if (!customerTrackMap || !lat || !lng) return;
+
+  const latLng = [Number(lat), Number(lng)];
+
+  if (!customerMarkers[key]) {
+    customerMarkers[key] = L.marker(latLng, { icon: makeEmojiIcon(emoji, className) }).addTo(customerTrackMap);
+  } else {
+    customerMarkers[key].setLatLng(latLng);
+  }
+
+  customerMarkers[key].bindPopup(popupText);
+}
+
+window.openTrack = function(bookingId) {
+  if (!bookingId) {
+    alert('Booking ID not available yet.');
+    return;
+  }
+
+  state.trackingBookingId = bookingId;
+  go('s-track');
+
+  if (trackingInterval) clearInterval(trackingInterval);
+  trackingInterval = setInterval(() => {
+    if (document.getElementById('s-track').classList.contains('active')) {
+      loadTrackScreen();
+    }
+  }, 20000);
+};
+
+window.loadTrackScreen = async function() {
+  if (!state.trackingBookingId) {
+    document.getElementById('track-status-title').textContent = 'No booking selected';
+    document.getElementById('track-booking-line').textContent = 'Please open tracking from your booking.';
+    return;
+  }
+
+  initCustomerTrackMap();
+
+  const { data: booking, error } = await supabase
+    .from('bookings')
+    .select(`
+      id,
+      booking_status,
+      tanker_size_kl,
+      scheduled_date,
+      scheduled_time,
+      total_amount,
+      payment_method,
+      payment_status,
+      customers(name, phone),
+      addresses(area, full_address, landmark, lat, lng),
+      drivers(id, name, phone, vehicle_number, current_lat, current_lng, current_tank_pct)
+    `)
+    .eq('id', state.trackingBookingId)
+    .single();
+
+  if (error || !booking) {
+    document.getElementById('track-status-title').textContent = 'Unable to load tracking';
+    document.getElementById('track-booking-line').textContent = error?.message || 'Booking not found';
+    return;
+  }
+
+  document.getElementById('track-status-title').textContent = getCustomerFriendlyStatus(booking);
+  document.getElementById('track-booking-line').textContent =
+    `Booking #RW${booking.id} · ${booking.tanker_size_kl} KL · ${formatTime(booking.scheduled_time)} · ${booking.addresses?.area || 'Area not available'}`;
+  document.getElementById('track-payment-line').textContent =
+    `Payment: ${(booking.payment_method || '').toUpperCase()} ₹${booking.total_amount} · ${booking.payment_status}`;
+
+  const callBtn = document.getElementById('call-driver-btn');
+
+  if (booking.drivers) {
+    document.getElementById('track-driver-line').textContent =
+      `Driver: ${booking.drivers.name} · ${booking.drivers.vehicle_number}`;
+
+    callBtn.href = `tel:${booking.drivers.phone}`;
+    callBtn.style.pointerEvents = 'auto';
+    callBtn.style.opacity = '1';
+  } else {
+    document.getElementById('track-driver-line').textContent =
+      'Driver not assigned yet. Please wait.';
+
+    callBtn.href = '#';
+    callBtn.style.pointerEvents = 'none';
+    callBtn.style.opacity = '.5';
+  }
+
+  if (booking.addresses?.lat && booking.addresses?.lng) {
+    updateCustomerMarker(
+      'customer',
+      booking.addresses.lat,
+      booking.addresses.lng,
+      '📍',
+      'marker-home',
+      `Delivery location<br>${booking.addresses.full_address || ''}`
+    );
+  }
+
+  if (booking.drivers?.current_lat && booking.drivers?.current_lng) {
+    updateCustomerMarker(
+      'driver',
+      booking.drivers.current_lat,
+      booking.drivers.current_lng,
+      '🚛',
+      'marker-truck',
+      `${booking.drivers.name}<br>${booking.drivers.vehicle_number}<br>Tank: ${booking.drivers.current_tank_pct || 0}%`
+    );
+  }
+
+  const points = Object.values(customerMarkers).map(m => m.getLatLng());
+  if (points.length > 1) {
+    customerTrackMap.fitBounds(points, { padding: [40, 40], maxZoom: 15 });
+  } else if (points.length === 1) {
+    customerTrackMap.setView(points[0], 15);
+  } else if (customerTrackMap) {
+    customerTrackMap.setView(SHAMSHABAD_CENTER, 13);
+  }
+};
+
+function getCustomerFriendlyStatus(booking) {
+  if (booking.booking_status === 'pending') return 'Waiting for driver assignment';
+  if (booking.booking_status === 'assigned') return 'Driver assigned';
+  if (booking.booking_status === 'in_progress') return 'Tanker is on the way';
+  if (booking.booking_status === 'completed') return 'Delivery completed';
+  if (booking.booking_status === 'cancelled') return 'Booking cancelled';
+  return 'Booking status: ' + booking.booking_status;
+}
+
+// Load my bookings
+async function loadMyBookings() {
+  const container = document.getElementById('my-bookings');
+
+  if (isDemo) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">Bookings appear here after Supabase is connected</div>';
+    return;
+  }
+
+  const phone = state.customer?.phone || localStorage.getItem('customer_phone');
+
+  if (!phone) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">No bookings yet. Book your first tanker above!</div>';
+    return;
+  }
+
+  const { data: cust } = await supabase
+    .from('customers')
+    .select('id')
+    .eq('phone', phone)
+    .maybeSingle();
+
+  if (!cust) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">No bookings yet</div>';
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, tanker_size_kl, scheduled_date, scheduled_time, total_amount, booking_status, drivers(name)')
+    .eq('customer_id', cust.id)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (error || !data || data.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">No bookings yet</div>';
+    return;
+  }
+
+  container.innerHTML = data.map(b => {
+    const canTrack = ['pending', 'assigned', 'in_progress'].includes(b.booking_status);
+    return `
+      <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div>
+            <div style="font-size:13px;font-weight:600">${b.tanker_size_kl} KL · ${b.scheduled_date}</div>
+            <div style="font-size:11px;color:var(--soft);margin-top:2px">
+              #RW${b.id} · ₹${b.total_amount} · ${b.drivers?.name || 'Unassigned'}
+            </div>
+          </div>
+          <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:var(--blue-l);color:var(--blue)">
+            ${b.booking_status}
+          </span>
+        </div>
+        ${
+          canTrack
+            ? `<button onclick="openTrack(${b.id})" style="margin-top:10px;width:100%;padding:10px;border:none;border-radius:10px;background:var(--blue);color:white;font-family:'Syne',sans-serif;font-size:12px;font-weight:700">
+                Track tanker
+              </button>`
+            : ''
+        }
+      </div>
+    `;
+  }).join('');
+}
+
+window.loadMyBookings = loadMyBookings;
+loadMyBookings();
+</script>
+
+</body>
+</html>
