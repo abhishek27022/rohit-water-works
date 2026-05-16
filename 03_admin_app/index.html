@@ -4,9 +4,100 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rohit Water Works — Admin Dashboard</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+<!-- Leaflet Map Library -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
+  .map-panel {
+  margin-bottom: 20px;
+}
+
+.map-head-right {
+  font-size: 11px;
+  color: #64748B;
+}
+
+#driver-map {
+  height: 380px;
+  width: 100%;
+  background: #0F172A;
+}
+
+.map-note {
+  padding: 10px 16px;
+  border-top: 1px solid #334155;
+  font-size: 12px;
+  color: #94A3B8;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.driver-marker {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+}
+
+.driver-marker.online {
+  background: #16A34A;
+  color: #fff;
+}
+
+.driver-marker.busy {
+  background: #D97706;
+  color: #fff;
+}
+
+.driver-marker.offline {
+  background: #64748B;
+  color: #fff;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #1E293B;
+  color: #E2E8F0;
+  border-radius: 12px;
+}
+
+.leaflet-popup-tip {
+  background: #1E293B;
+}
+
+.popup-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.popup-line {
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #CBD5E1;
+}
+
+.popup-job {
+  margin-top: 8px;
+  padding: 8px;
+  background: #0F172A;
+  border-radius: 8px;
+  font-size: 12px;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:#0F172A;color:#E2E8F0;min-height:100vh}
 .container{max-width:1400px;margin:0 auto;padding:24px}
@@ -105,7 +196,18 @@ body{font-family:'DM Sans',sans-serif;background:#0F172A;color:#E2E8F0;min-heigh
       <div class="metric-sub" id="m-upi-sub">Loading...</div>
     </div>
   </div>
-
+<!-- LIVE DRIVER MAP -->
+<div class="panel map-panel">
+  <div class="panel-head">
+    <span class="panel-title">Live Driver Map</span>
+    <span class="map-head-right" id="map-status">Waiting for driver locations...</span>
+  </div>
+  <div id="driver-map"></div>
+  <div class="map-note">
+    <span>Green = online, Orange = on booking, Grey = offline</span>
+    <span>Drivers must allow location in driver app</span>
+  </div>
+</div>
   <div class="layout">
 
     <!-- BOOKINGS PANEL -->
@@ -157,6 +259,147 @@ if (isSetup) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  // ════════════ Live Driver Map ════════════
+const SHAMSHABAD_CENTER = [17.2512, 78.4377]; // approximate Shamshabad center
+let driverMap = null;
+let driverMarkers = {};
+let mapHasFitted = false;
+
+function initDriverMap() {
+  if (driverMap || !window.L) return;
+
+  driverMap = L.map('driver-map').setView(SHAMSHABAD_CENTER, 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(driverMap);
+
+  setTimeout(() => driverMap.invalidateSize(), 300);
+}
+
+function makeDriverIcon(driver, activeBooking) {
+  const initials = driver.name
+    .split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const statusClass = activeBooking
+    ? 'busy'
+    : driver.is_online
+      ? 'online'
+      : 'offline';
+
+  return L.divIcon({
+    html: `<div class="driver-marker ${statusClass}">${initials}</div>`,
+    className: '',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
+  });
+}
+
+function driverPopupHtml(driver, activeBooking) {
+  const jobHtml = activeBooking
+    ? `
+      <div class="popup-job">
+        <strong>Current Booking</strong><br>
+        #RW${activeBooking.id} · ${activeBooking.tanker_size_kl} KL<br>
+        ${activeBooking.customers?.name || 'Customer'} · ${activeBooking.addresses?.area || 'No area'}<br>
+        Status: ${activeBooking.booking_status}<br>
+        Payment: ${activeBooking.payment_method?.toUpperCase()} ₹${activeBooking.total_amount}
+      </div>
+    `
+    : `<div class="popup-job">No active booking</div>`;
+
+  return `
+    <div>
+      <div class="popup-title">${driver.name}</div>
+      <div class="popup-line">${driver.vehicle_number} · ${driver.vehicle_capacity_kl} KL</div>
+      <div class="popup-line">Tank: ${driver.current_tank_pct}%</div>
+      <div class="popup-line">Status: ${driver.is_online ? 'Online' : 'Offline'}</div>
+      ${jobHtml}
+    </div>
+  `;
+}
+
+async function loadDriverMap() {
+  if (!isSetup) return;
+
+  initDriverMap();
+  if (!driverMap) return;
+
+  const { data: drivers, error: driverError } = await supabase
+    .from('drivers')
+    .select('id, name, phone, vehicle_number, vehicle_capacity_kl, zone, is_online, current_tank_pct, current_lat, current_lng')
+    .eq('is_active', true);
+
+  if (driverError || !drivers) {
+    document.getElementById('map-status').textContent = 'Error loading drivers';
+    return;
+  }
+
+  const { data: activeBookings } = await supabase
+    .from('bookings')
+    .select(`
+      id,
+      driver_id,
+      tanker_size_kl,
+      scheduled_time,
+      total_amount,
+      payment_method,
+      booking_status,
+      customers(name, phone),
+      addresses(area, full_address, lat, lng)
+    `)
+    .in('booking_status', ['assigned', 'in_progress']);
+
+  const bookingByDriver = {};
+  (activeBookings || []).forEach(b => {
+    if (b.driver_id) bookingByDriver[b.driver_id] = b;
+  });
+
+  let visibleDrivers = 0;
+  const seenDriverIds = new Set();
+
+  drivers.forEach(driver => {
+    if (!driver.current_lat || !driver.current_lng) return;
+
+    const activeBooking = bookingByDriver[driver.id];
+    const latLng = [Number(driver.current_lat), Number(driver.current_lng)];
+    seenDriverIds.add(driver.id);
+    visibleDrivers++;
+
+    if (!driverMarkers[driver.id]) {
+      driverMarkers[driver.id] = L.marker(latLng, {
+        icon: makeDriverIcon(driver, activeBooking)
+      }).addTo(driverMap);
+    } else {
+      driverMarkers[driver.id].setLatLng(latLng);
+      driverMarkers[driver.id].setIcon(makeDriverIcon(driver, activeBooking));
+    }
+
+    driverMarkers[driver.id].bindPopup(driverPopupHtml(driver, activeBooking));
+  });
+
+  Object.keys(driverMarkers).forEach(driverId => {
+    if (!seenDriverIds.has(driverId)) {
+      driverMap.removeLayer(driverMarkers[driverId]);
+      delete driverMarkers[driverId];
+    }
+  });
+
+  const activeJobCount = activeBookings?.length || 0;
+  document.getElementById('map-status').textContent =
+    `${visibleDrivers} drivers on map · ${activeJobCount} active bookings`;
+
+  if (visibleDrivers > 0 && !mapHasFitted) {
+    const bounds = Object.values(driverMarkers).map(m => m.getLatLng());
+    driverMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    mapHasFitted = true;
+  }
+}
 
 // Update clock
 setInterval(() => {
@@ -273,54 +516,92 @@ async function loadDrivers() {
     return;
   }
 
-  const { data, error } = await supabase
+  const { data: drivers, error } = await supabase
     .from('drivers')
     .select('*')
     .eq('is_active', true)
     .order('name');
 
-  if (error || !data) {
+  if (error || !drivers) {
     document.getElementById('drivers-list').innerHTML =
       '<div class="empty">Error loading drivers</div>';
     return;
   }
 
+  const { data: activeBookings } = await supabase
+    .from('bookings')
+    .select(`
+      id,
+      driver_id,
+      tanker_size_kl,
+      scheduled_time,
+      total_amount,
+      payment_method,
+      booking_status,
+      customers(name, phone),
+      addresses(area, full_address)
+    `)
+    .in('booking_status', ['assigned', 'in_progress']);
+
+  const bookingByDriver = {};
+  (activeBookings || []).forEach(b => {
+    if (b.driver_id) bookingByDriver[b.driver_id] = b;
+  });
+
+  const onlineCount = drivers.filter(d => d.is_online).length;
+
   document.getElementById('driver-count').textContent =
-    `${data.filter(d => d.is_online).length} online · ${data.length} total`;
+    `${onlineCount} online · ${drivers.length} total`;
+
   document.getElementById('m-trucks').textContent =
-    `${data.filter(d => d.is_online).length} / ${data.length}`;
+    `${onlineCount} / ${drivers.length}`;
+
   document.getElementById('m-trucks-sub').textContent =
-    `${data.length - data.filter(d => d.is_online).length} idle`;
+    `${drivers.length - onlineCount} idle`;
 
   const colors = ['#4ADE80', '#60A5FA', '#FBBF24', '#F472B6', '#A78BFA'];
-  const html = data.map((d, i) => {
+
+  const html = drivers.map((d, i) => {
     const initials = d.name.split(' ').map(n => n[0]).slice(0, 2).join('');
     const c = colors[i % colors.length];
     const tankColor = d.current_tank_pct > 60 ? '#4ADE80' : d.current_tank_pct > 25 ? '#FBBF24' : '#FCA5A5';
+    const activeBooking = bookingByDriver[d.id];
+
+    const jobLine = activeBooking
+      ? `Working: #RW${activeBooking.id} · ${activeBooking.customers?.name || 'Customer'} · ${activeBooking.addresses?.area || 'No area'}`
+      : 'No active booking';
+
+    const jobColor = activeBooking ? '#FBBF24' : '#64748B';
+
+    const gpsLine = d.current_lat && d.current_lng
+      ? 'GPS live'
+      : 'No GPS yet';
+
     return `
       <div class="driver-row">
         <div class="driver-avatar" style="background:${c}33;color:${c}">${initials}</div>
+
         <div class="driver-info">
           <div class="driver-name">${d.name}</div>
           <div class="driver-meta">${d.vehicle_number} · ${d.vehicle_capacity_kl} KL · ${d.zone || 'No zone'}</div>
+          <div style="font-size:11px;color:${jobColor};margin-top:3px">${jobLine}</div>
+          <div style="font-size:10px;color:#64748B;margin-top:2px">${gpsLine}</div>
         </div>
+
         <div style="text-align:right">
           <div style="font-size:11px;color:${tankColor};font-weight:700">${d.current_tank_pct}% tank</div>
-          <div style="font-size:10px;color:${d.is_online ? '#4ADE80' : '#64748B'};margin-top:2px">${d.is_online ? '● Online' : 'Offline'}</div>
+          <div style="font-size:10px;color:${d.is_online ? '#4ADE80' : '#64748B'};margin-top:2px">
+            ${d.is_online ? '● Online' : 'Offline'}
+          </div>
+          <div style="font-size:10px;color:${activeBooking ? '#FBBF24' : '#64748B'};margin-top:2px">
+            ${activeBooking ? activeBooking.booking_status : 'Free'}
+          </div>
         </div>
       </div>
     `;
   }).join('');
 
   document.getElementById('drivers-list').innerHTML = html;
-}
-
-function formatTime(t) {
-  if (!t) return '—';
-  const [h, m] = t.split(':');
-  const hour = parseInt(h);
-  const am = hour < 12;
-  return `${hour > 12 ? hour - 12 : hour}:${m} ${am ? 'AM' : 'PM'}`;
 }
 
 // ════════════ Real-time updates ════════════
@@ -331,7 +612,12 @@ function setupRealtime() {
     .channel('bookings-changes')
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'bookings' },
-      () => { loadBookings(); loadSummary(); }
+      () => {
+        loadBookings();
+        loadSummary();
+        loadDrivers();
+        loadDriverMap();
+      }
     )
     .subscribe();
 
@@ -339,7 +625,10 @@ function setupRealtime() {
     .channel('drivers-changes')
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'drivers' },
-      () => { loadDrivers(); }
+      () => {
+        loadDrivers();
+        loadDriverMap();
+      }
     )
     .subscribe();
 }
@@ -476,15 +765,46 @@ async function checkConnection() {
 // ════════════ Initialize ════════════
 async function init() {
   await checkConnection();
-  await Promise.all([loadSummary(), loadBookings(), loadDrivers()]);
+  await Promise.all([loadSummary(), loadBookings(), loadDrivers(), loadDriverMap()]);
   setupRealtime();
+  startLocationTracking();
+  function startLocationTracking() {
+  if (isDemo || !driver || !navigator.geolocation) return;
+
+  navigator.geolocation.watchPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      driver.current_lat = lat;
+      driver.current_lng = lng;
+
+      await supabase
+        .from('drivers')
+        .update({
+          current_lat: lat,
+          current_lng: lng
+        })
+        .eq('id', driver.id);
+    },
+    (error) => {
+      console.log('Location permission/error:', error.message);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 30000,
+      timeout: 15000
+    }
+  );
+}
 
   // Refresh every 30 seconds as backup to real-time
   setInterval(() => {
-    loadSummary();
-    loadBookings();
-    loadDrivers();
-  }, 30000);
+  loadSummary();
+  loadBookings();
+  loadDrivers();
+  loadDriverMap();
+}, 30000);
 }
 
 init();
