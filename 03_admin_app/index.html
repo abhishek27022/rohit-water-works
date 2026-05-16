@@ -346,32 +346,107 @@ function setupRealtime() {
 
 // ════════════ Global functions ════════════
 window.assignBooking = async function(bookingId) {
-  const { data: drivers } = await supabase
-    .from('drivers')
-    .select('id, name, current_tank_pct')
-    .eq('is_online', true)
-    .gte('current_tank_pct', 30);
+  try {
+    // 1. Get booking details first
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select('id, tanker_size_kl, address_id, addresses(lat, lng, area)')
+      .eq('id', bookingId)
+      .single();
 
-  if (!drivers || drivers.length === 0) {
-    alert('No drivers available right now!');
-    return;
+    if (bookingError) throw bookingError;
+    if (!booking) {
+      alert('Booking not found.');
+      return;
+    }
+
+    // 2. Get only matching available drivers
+    const { data: drivers, error: driverError } = await supabase
+      .from('drivers')
+      .select('id, name, vehicle_number, vehicle_capacity_kl, current_tank_pct, current_lat, current_lng')
+      .eq('is_active', true)
+      .eq('is_online', true)
+      .eq('vehicle_capacity_kl', booking.tanker_size_kl)
+      .gte('current_tank_pct', 50);
+
+    if (driverError) throw driverError;
+
+    if (!drivers || drivers.length === 0) {
+      alert(
+        `No available ${booking.tanker_size_kl} KL driver right now.\n\n` +
+        `Check:\n` +
+        `1. Driver is online\n` +
+        `2. Driver vehicle capacity is ${booking.tanker_size_kl} KL\n` +
+        `3. Tank level is above 50%`
+      );
+      return;
+    }
+
+    // 3. Auto-pick nearest driver if location exists
+    let selectedDriver = null;
+
+    const bookingLat = booking.addresses?.lat;
+    const bookingLng = booking.addresses?.lng;
+
+    if (bookingLat && bookingLng) {
+      const driversWithDistance = drivers
+        .filter(d => d.current_lat && d.current_lng)
+        .map(d => ({
+          ...d,
+          distance_km: getDistanceKm(
+            Number(bookingLat),
+            Number(bookingLng),
+            Number(d.current_lat),
+            Number(d.current_lng)
+          )
+        }))
+        .sort((a, b) => a.distance_km - b.distance_km);
+
+      selectedDriver = driversWithDistance[0] || null;
+    }
+
+    // 4. If no GPS location, pick driver with highest tank level
+    if (!selectedDriver) {
+      selectedDriver = drivers.sort((a, b) => b.current_tank_pct - a.current_tank_pct)[0];
+    }
+
+    // 5. Assign booking automatically
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        driver_id: selectedDriver.id,
+        booking_status: 'assigned'
+      })
+      .eq('id', bookingId);
+
+    if (updateError) throw updateError;
+
+    alert(`Booking assigned to ${selectedDriver.name}`);
+    await loadBookings();
+    await loadDrivers();
+    await loadSummary();
+
+  } catch (err) {
+    console.error('Assign error:', err);
+    alert('Error assigning driver: ' + err.message);
   }
-
-  const options = drivers.map((d, i) => `${i + 1}. ${d.name} (${d.current_tank_pct}% tank)`).join('\n');
-  const choice = prompt('Pick a driver:\n\n' + options + '\n\nEnter number:');
-  if (!choice) return;
-
-  const idx = parseInt(choice) - 1;
-  if (idx < 0 || idx >= drivers.length) return;
-
-  const { error } = await supabase
-    .from('bookings')
-    .update({ driver_id: drivers[idx].id, booking_status: 'assigned' })
-    .eq('id', bookingId);
-
-  if (error) alert('Error: ' + error.message);
-  else loadBookings();
 };
+
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) *
+    Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 window.newBooking = function() {
   alert('Open the customer app at /customer to make a booking, or build a quick-add form here for walk-ins.');
