@@ -1,0 +1,7 @@
+{
+  "name": "rohit-water-works",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
