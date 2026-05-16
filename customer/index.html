@@ -7,30 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
-/* existing CSS */
-
-/* Location button */
-.loc-btn {
-  width: 100%;
-  padding: 13px 14px;
-  border-radius: 10px;
-  border: 1.5px solid var(--blue);
-  background: var(--blue-l);
-  color: var(--blue);
-  font-family: 'Syne', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.loc-btn:hover {
-  background: #dceaff;
-}
-</style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --blue:#1A56DB;--blue-l:#EBF1FF;--water:#0EA5E9;--water-l:#E0F5FF;
@@ -135,9 +111,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;max-
 .book-id-v{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--green-d);letter-spacing:1px}
 
 .connection-warn{background:#1C1A0A;border:1px solid #92400E;color:#FBBF24;padding:10px 16px;font-size:12px;text-align:center;font-weight:500}
+
+.loc-btn {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--blue);
+  background: var(--blue-l);
+  color: var(--blue);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.loc-btn:hover {
+  background: #dceaff;
+}
 </style>
 </head>
-<body>
 
 <div id="connection-warn" class="connection-warn" style="display:none">⚙️ Demo mode — update Supabase keys in source to enable real bookings</div>
 
@@ -359,8 +355,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // State
 let state = {
-  kl: 5, price: 700, date: 0, time: '10 AM', payment: 'upi',
-  customer: null, address: null, bookingId: null
+  kl: 5,
+  price: 700,
+  date: 0,
+  time: '10 AM',
+  payment: 'upi',
+  customer: null,
+  address: null,
+  bookingId: null,
+  customerLat: null,
+  customerLng: null
 };
 
 // Navigation
@@ -480,6 +484,7 @@ window.validateAddr = function() {
   if (!addr) return alert('Please enter your delivery address');
 
   state.customer = { name, phone: phone.replace(/\s/g,'').replace('+91','91') };
+  localStorage.setItem('customer_phone', state.customer.phone);
   state.address = {
   full_address: addr,
   area,
@@ -663,24 +668,38 @@ async function pollVerification(bookingId) {
 // Load my bookings
 async function loadMyBookings() {
   const container = document.getElementById('my-bookings');
+
   if (isDemo) {
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">Bookings appear here after Supabase is connected</div>';
     return;
   }
 
-  if (!state.customer) {
+  const phone = state.customer?.phone || localStorage.getItem('customer_phone');
+
+  if (!phone) {
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">No bookings yet. Book your first tanker above!</div>';
     return;
   }
 
-  const { data } = await supabase
+  const { data: cust, error: custError } = await supabase
+    .from('customers')
+    .select('id')
+    .eq('phone', phone)
+    .maybeSingle();
+
+  if (custError || !cust) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">No bookings yet</div>';
+    return;
+  }
+
+  const { data, error } = await supabase
     .from('bookings')
     .select('id, tanker_size_kl, scheduled_date, scheduled_time, total_amount, booking_status, drivers(name)')
-    .eq('customers.phone', state.customer.phone)
+    .eq('customer_id', cust.id)
     .order('created_at', { ascending: false })
     .limit(5);
 
-  if (!data || data.length === 0) {
+  if (error || !data || data.length === 0) {
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--soft);font-size:12px">No bookings yet</div>';
     return;
   }
