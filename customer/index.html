@@ -173,6 +173,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;max-
     <div class="inp-w"><input class="inp" id="cust-phone" type="tel" placeholder="+91 98XXXXXXXX" /></div>
     <label class="inp-l">Delivery address</label>
     <div class="inp-w"><textarea class="inp" id="cust-addr" rows="3" placeholder="Plot, street, area in Shamshabad..."></textarea></div>
+    <div class="inp-w">
+  <button type="button" class="loc-btn" onclick="useCurrentLocation()">
+    <i class="ti ti-current-location"></i>
+    Use my current location
+  </button>
+  <div id="location-status" style="font-size:11px;color:var(--soft);margin-top:6px">
+    Location not selected yet
+  </div>
+</div>
     <label class="inp-l">Area</label>
     <div class="inp-w">
       <select class="inp" id="cust-area">
