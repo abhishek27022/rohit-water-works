@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rohit Water Works — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#0F172A;color:#E2E8F0;min-height:100vh}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff}
+.subtitle{font-size:13px;color:#64748B;margin-top:4px}
+.status-pill{background:#134E26;color:#4ADE80;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.metric{background:#1E293B;border:1px solid #334155;border-radius:12px;padding:18px}
+.metric-label{font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.metric-val{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#fff}
+.metric-sub{font-size:12px;color:#64748B;margin-top:4px}
+
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.panel{background:#1E293B;border:1px solid #334155;border-radius:16px;overflow:hidden}
+.panel-head{padding:14px 18px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center}
+.panel-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff}
+
+.booking-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #0F172A}
+.booking-row:last-child{border-bottom:none}
+.bk-customer{font-size:14px;font-weight:600;color:#fff}
+.bk-detail{font-size:11px;color:#64748B;margin-top:2px}
+.bk-tanker{font-size:13px;color:#E2E8F0}
+.bk-tanker-sub{font-size:11px;color:#64748B;margin-top:2px}
+.bk-amount{font-size:14px;font-weight:700}
+.bk-amount.cod{color:#FBBF24}
+.bk-amount.upi{color:#60A5FA}
+
+.btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Syne',sans-serif}
+.btn-primary{background:#1A56DB;color:#fff}
+.btn-success{background:#16A34A;color:#fff}
+.btn-warn{background:rgba(217,119,6,0.15);color:#FBBF24;border:1px solid rgba(217,119,6,0.3)}
+
+.driver-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #0F172A}
+.driver-row:last-child{border-bottom:none}
+.driver-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;flex-shrink:0}
+.driver-info{flex:1}
+.driver-name{font-size:13px;font-weight:600;color:#E2E8F0}
+.driver-meta{font-size:11px;color:#64748B;margin-top:1px}
+
+.connection-status{position:fixed;bottom:20px;right:20px;background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px;z-index:100}
+.connection-status.connected{border-color:#16A34A}
+.connection-status.error{border-color:#DC2626;color:#FCA5A5}
+
+.empty{text-align:center;padding:40px 20px;color:#64748B;font-size:13px}
+.loading{padding:30px;text-align:center;color:#64748B}
+
+.setup-note{background:#1C1A0A;border:1px solid #92400E;border-radius:12px;padding:16px;margin-bottom:20px;color:#FDE68A;font-size:13px;line-height:1.6}
+.setup-note strong{color:#FBBF24}
+.setup-note code{background:#0F172A;padding:2px 8px;border-radius:4px;font-family:monospace;color:#FBBF24;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div>
+      <div class="title">Rohit Water Works</div>
+      <div class="subtitle">Admin Dashboard · Shamshabad Operations</div>
+    </div>
+    <div class="status-pill"><div class="dot"></div> Live · <span id="current-time">--:--</span></div>
+  </div>
+
+  <!-- Setup banner -->
+  <div class="setup-note" id="setup-note">
+    <strong>⚙️ First-time setup:</strong> Open this file in a text editor and replace the two values near the top of the &lt;script&gt; tag:
+    <br><code>SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co'</code>
+    <br><code>SUPABASE_KEY = 'eyJhb...your_anon_key'</code>
+    <br>Get these from Supabase → Project Settings → API. See <code>02_setup_guide.md</code> for full instructions.
+  </div>
+
+  <!-- Metrics -->
+  <div class="grid">
+    <div class="metric">
+      <div class="metric-label">Bookings today</div>
+      <div class="metric-val" id="m-bookings">—</div>
+      <div class="metric-sub" id="m-bookings-sub">Loading...</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Trucks active</div>
+      <div class="metric-val" id="m-trucks">—</div>
+      <div class="metric-sub" id="m-trucks-sub">Loading...</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Cash collected</div>
+      <div class="metric-val" id="m-cash" style="color:#4ADE80">—</div>
+      <div class="metric-sub" id="m-cash-sub">Loading...</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">UPI received</div>
+      <div class="metric-val" id="m-upi" style="color:#60A5FA">—</div>
+      <div class="metric-sub" id="m-upi-sub">Loading...</div>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <!-- BOOKINGS PANEL -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Today's Bookings</span>
+        <button class="btn btn-primary" onclick="newBooking()">+ New Booking</button>
+      </div>
+      <div id="bookings-list">
+        <div class="loading">Loading bookings...</div>
+      </div>
+    </div>
+
+    <!-- DRIVERS PANEL -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Drivers</span>
+        <span style="font-size:11px;color:#64748B" id="driver-count">—</span>
+      </div>
+      <div id="drivers-list">
+        <div class="loading">Loading drivers...</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="connection-status" id="conn-status">
+  <i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Connecting to database...
+</div>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// ════════════════════════════════════════════════════════════
+//  REPLACE THESE TWO VALUES WITH YOURS FROM SUPABASE
+// ════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_KEY = 'eyJhb...YOUR_ANON_KEY';
+// ════════════════════════════════════════════════════════════
+
+const isSetup = !SUPABASE_URL.includes('YOUR_PROJECT');
+
+if (isSetup) {
+  document.getElementById('setup-note').style.display = 'none';
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Update clock
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('current-time').textContent =
+    now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}, 1000);
+
+// ════════════ Load today's summary ════════════
+async function loadSummary() {
+  if (!isSetup) {
+    document.getElementById('m-bookings').textContent = '0';
+    document.getElementById('m-bookings-sub').textContent = 'Set up Supabase first';
+    document.getElementById('m-trucks').textContent = '0 / 10';
+    document.getElementById('m-trucks-sub').textContent = 'Set up Supabase first';
+    document.getElementById('m-cash').textContent = '₹0';
+    document.getElementById('m-cash-sub').textContent = 'Set up Supabase first';
+    document.getElementById('m-upi').textContent = '₹0';
+    document.getElementById('m-upi-sub').textContent = 'Set up Supabase first';
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.from('today_summary').select('*').single();
+    if (error) throw error;
+
+    document.getElementById('m-bookings').textContent = data.deliveries_done || 0;
+    document.getElementById('m-bookings-sub').textContent =
+      `${data.active_bookings || 0} active`;
+    document.getElementById('m-cash').textContent =
+      '₹' + (data.cash_collected || 0).toLocaleString('en-IN');
+    document.getElementById('m-cash-sub').textContent = 'COD deliveries';
+    document.getElementById('m-upi').textContent =
+      '₹' + (data.upi_received || 0).toLocaleString('en-IN');
+    document.getElementById('m-upi-sub').textContent = 'Online payments';
+  } catch (err) {
+    console.error('Summary error:', err);
+  }
+}
+
+// ════════════ Load bookings ════════════
+async function loadBookings() {
+  if (!isSetup) {
+    document.getElementById('bookings-list').innerHTML =
+      '<div class="empty">⚙️ Connect Supabase to see live bookings</div>';
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      id, tanker_size_kl, scheduled_time, total_amount,
+      payment_method, payment_status, booking_status,
+      customers(name, phone),
+      addresses(area),
+      drivers(name)
+    `)
+    .eq('scheduled_date', today)
+    .order('scheduled_time');
+
+  if (error) {
+    document.getElementById('bookings-list').innerHTML =
+      '<div class="empty">Error loading bookings: ' + error.message + '</div>';
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    document.getElementById('bookings-list').innerHTML =
+      '<div class="empty">No bookings yet today. Create one or wait for customers!</div>';
+    return;
+  }
+
+  const html = data.map(b => {
+    const statusColors = {
+      pending: { bg: 'rgba(220,38,38,0.1)', color: '#FCA5A5', label: 'Unassigned' },
+      assigned: { bg: 'rgba(217,119,6,0.15)', color: '#FBBF24', label: 'Assigned' },
+      in_progress: { bg: 'rgba(96,165,250,0.15)', color: '#60A5FA', label: 'In progress' },
+      completed: { bg: 'rgba(22,163,74,0.15)', color: '#4ADE80', label: 'Done' },
+      cancelled: { bg: 'rgba(220,38,38,0.1)', color: '#FCA5A5', label: 'Cancelled' }
+    };
+    const s = statusColors[b.booking_status] || statusColors.pending;
+    const action = !b.driver_id
+      ? `<button class="btn btn-warn" onclick="assignBooking(${b.id})">Assign driver</button>`
+      : `<span style="background:${s.bg};color:${s.color};font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px">${s.label}</span>`;
+
+    return `
+      <div class="booking-row">
+        <div>
+          <div class="bk-customer">${b.customers?.name || 'Walk-in'}</div>
+          <div class="bk-detail">#RW${b.id} · ${b.customers?.phone || '—'}</div>
+        </div>
+        <div>
+          <div class="bk-tanker">${b.tanker_size_kl} KL · ${formatTime(b.scheduled_time)}</div>
+          <div class="bk-tanker-sub">${b.addresses?.area || '—'}</div>
+        </div>
+        <div>
+          <div class="bk-amount ${b.payment_method}">${b.payment_method === 'upi' ? 'UPI' : 'COD'} ₹${b.total_amount}</div>
+          <div class="bk-tanker-sub">${b.drivers?.name || 'Not assigned'}</div>
+        </div>
+        <div>${action}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('bookings-list').innerHTML = html;
+}
+
+// ════════════ Load drivers ════════════
+async function loadDrivers() {
+  if (!isSetup) {
+    document.getElementById('drivers-list').innerHTML =
+      '<div class="empty">⚙️ Connect Supabase to see driver status</div>';
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('drivers')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error || !data) {
+    document.getElementById('drivers-list').innerHTML =
+      '<div class="empty">Error loading drivers</div>';
+    return;
+  }
+
+  document.getElementById('driver-count').textContent =
+    `${data.filter(d => d.is_online).length} online · ${data.length} total`;
+  document.getElementById('m-trucks').textContent =
+    `${data.filter(d => d.is_online).length} / ${data.length}`;
+  document.getElementById('m-trucks-sub').textContent =
+    `${data.length - data.filter(d => d.is_online).length} idle`;
+
+  const colors = ['#4ADE80', '#60A5FA', '#FBBF24', '#F472B6', '#A78BFA'];
+  const html = data.map((d, i) => {
+    const initials = d.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+    const c = colors[i % colors.length];
+    const tankColor = d.current_tank_pct > 60 ? '#4ADE80' : d.current_tank_pct > 25 ? '#FBBF24' : '#FCA5A5';
+    return `
+      <div class="driver-row">
+        <div class="driver-avatar" style="background:${c}33;color:${c}">${initials}</div>
+        <div class="driver-info">
+          <div class="driver-name">${d.name}</div>
+          <div class="driver-meta">${d.vehicle_number} · ${d.vehicle_capacity_kl} KL · ${d.zone || 'No zone'}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:${tankColor};font-weight:700">${d.current_tank_pct}% tank</div>
+          <div style="font-size:10px;color:${d.is_online ? '#4ADE80' : '#64748B'};margin-top:2px">${d.is_online ? '● Online' : 'Offline'}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('drivers-list').innerHTML = html;
+}
+
+function formatTime(t) {
+  if (!t) return '—';
+  const [h, m] = t.split(':');
+  const hour = parseInt(h);
+  const am = hour < 12;
+  return `${hour > 12 ? hour - 12 : hour}:${m} ${am ? 'AM' : 'PM'}`;
+}
+
+// ════════════ Real-time updates ════════════
+function setupRealtime() {
+  if (!isSetup) return;
+
+  supabase
+    .channel('bookings-changes')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'bookings' },
+      () => { loadBookings(); loadSummary(); }
+    )
+    .subscribe();
+
+  supabase
+    .channel('drivers-changes')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'drivers' },
+      () => { loadDrivers(); }
+    )
+    .subscribe();
+}
+
+// ════════════ Global functions ════════════
+window.assignBooking = async function(bookingId) {
+  const { data: drivers } = await supabase
+    .from('drivers')
+    .select('id, name, current_tank_pct')
+    .eq('is_online', true)
+    .gte('current_tank_pct', 30);
+
+  if (!drivers || drivers.length === 0) {
+    alert('No drivers available right now!');
+    return;
+  }
+
+  const options = drivers.map((d, i) => `${i + 1}. ${d.name} (${d.current_tank_pct}% tank)`).join('\n');
+  const choice = prompt('Pick a driver:\n\n' + options + '\n\nEnter number:');
+  if (!choice) return;
+
+  const idx = parseInt(choice) - 1;
+  if (idx < 0 || idx >= drivers.length) return;
+
+  const { error } = await supabase
+    .from('bookings')
+    .update({ driver_id: drivers[idx].id, booking_status: 'assigned' })
+    .eq('id', bookingId);
+
+  if (error) alert('Error: ' + error.message);
+  else loadBookings();
+};
+
+window.newBooking = function() {
+  alert('Open the customer app at /customer to make a booking, or build a quick-add form here for walk-ins.');
+};
+
+// ════════════ Connection check ════════════
+async function checkConnection() {
+  const statusEl = document.getElementById('conn-status');
+  if (!isSetup) {
+    statusEl.innerHTML = '<i class="ti ti-alert-circle"></i> Setup required — see banner above';
+    statusEl.className = 'connection-status error';
+    return;
+  }
+
+  try {
+    const { error } = await supabase.from('drivers').select('id').limit(1);
+    if (error) throw error;
+    statusEl.innerHTML = '<i class="ti ti-check"></i> Connected · Live updates active';
+    statusEl.className = 'connection-status connected';
+  } catch (err) {
+    statusEl.innerHTML = '<i class="ti ti-alert-circle"></i> Connection failed';
+    statusEl.className = 'connection-status error';
+    console.error(err);
+  }
+}
+
+// ════════════ Initialize ════════════
+async function init() {
+  await checkConnection();
+  await Promise.all([loadSummary(), loadBookings(), loadDrivers()]);
+  setupRealtime();
+
+  // Refresh every 30 seconds as backup to real-time
+  setInterval(() => {
+    loadSummary();
+    loadBookings();
+    loadDrivers();
+  }, 30000);
+}
+
+init();
+</script>
+
+</body>
+</html>

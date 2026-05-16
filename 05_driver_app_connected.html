@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Rohit Water Works — Driver</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#0F172A;color:#E2E8F0;min-height:100vh;max-width:480px;margin:0 auto}
+.screen{display:none;flex-direction:column;min-height:100vh}
+.screen.active{display:flex;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.connection-warn{background:#1C1A0A;border-bottom:1px solid #92400E;color:#FBBF24;padding:10px 16px;font-size:12px;text-align:center;font-weight:500}
+
+.online-bar{margin:16px;background:#1E293B;border:1px solid #334155;border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.ob-l{font-size:9px;color:#64748B;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.ob-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff}
+.ob-status{font-size:12px;font-weight:600;margin-top:2px}
+.ob-status.on{color:#4ADE80}
+.ob-status.off{color:#64748B}
+
+.tog{width:52px;height:28px;border-radius:14px;cursor:pointer;position:relative;transition:background .3s}
+.tog.on{background:#16A34A}
+.tog.off{background:#374151}
+.tog-thumb{position:absolute;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .3s}
+.tog.on .tog-thumb{left:27px}
+.tog.off .tog-thumb{left:3px}
+
+.mets{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px;margin-bottom:14px}
+.met{background:#1E293B;border:1px solid #334155;border-radius:10px;padding:12px}
+.met-l{font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.met-v{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff}
+.met-s{font-size:10px;color:#64748B;margin-top:2px}
+
+.cash-warn{margin:0 16px 14px;background:#1C1A0A;border:1px solid #92400E;border-radius:10px;padding:11px 14px;display:flex;gap:10px;align-items:flex-start}
+.cash-warn i{color:#FBBF24;font-size:16px;flex-shrink:0}
+.cash-warn-t{font-size:12px;color:#FDE68A;line-height:1.4}
+
+.sec{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#64748B;letter-spacing:.6px;text-transform:uppercase;padding:14px 16px 10px}
+
+.job-card{margin:0 16px 14px;background:linear-gradient(135deg,#1E3A8A,#1E40AF);border-radius:14px;overflow:hidden;border:1px solid rgba(99,179,237,0.25);animation:pulse 1.5s ease infinite alternate}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.015)}}
+.job-pulse{height:3px;background:linear-gradient(90deg,#3B82F6,#06B6D4,#3B82F6);background-size:200% 100%;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.job-head{padding:13px 16px 9px;display:flex;justify-content:space-between;align-items:center}
+.job-tag{background:rgba(59,130,246,0.3);color:#93C5FD;font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.5px;display:flex;align-items:center;gap:5px}
+.job-body{padding:0 16px 16px}
+.job-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.job-ri{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.job-ri i{font-size:13px;color:#93C5FD}
+.job-rl{font-size:9px;color:#93A3B8;margin-bottom:2px;letter-spacing:.4px}
+.job-rv{font-size:13px;font-weight:500;color:#fff}
+.job-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.ja-no{background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#FCA5A5;border-radius:10px;padding:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center}
+.ja-yes{background:linear-gradient(135deg,#16A34A,#22C55E);border:none;color:#fff;border-radius:10px;padding:11px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center;box-shadow:0 4px 12px rgba(22,163,74,0.4)}
+
+.cj{margin:0 16px 14px;background:#1E293B;border:1px solid #334155;border-radius:14px;overflow:hidden}
+.cj-head{background:#134E26;padding:11px 16px;display:flex;justify-content:space-between;align-items:center}
+.cj-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#4ADE80}
+.cj-badge{background:rgba(74,222,128,0.2);color:#4ADE80;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
+.cj-body{padding:14px 16px}
+.cj-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #0F172A}
+.cj-row:last-child{border-bottom:none}
+.cj-ico{width:32px;height:32px;border-radius:9px;background:#0F172A;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cj-ico i{font-size:14px;color:#64748B}
+.cj-key{font-size:11px;color:#64748B}
+.cj-val{font-size:13px;font-weight:500;color:#E2E8F0;margin-top:1px}
+.cj-val.cash{color:#FBBF24;font-weight:700}
+.cj-val.nocash{color:#4ADE80;font-weight:600}
+.cj-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 12px}
+.cj-btn{padding:10px;border-radius:10px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;border:none;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.cj-call{background:#1E293B;color:#94A3B8;border:1px solid #334155}
+.cj-nav{background:#1A56DB;color:#fff}
+.cj-done{width:calc(100% - 32px);margin:0 16px 16px;padding:13px;border-radius:10px;background:#16A34A;color:#fff;border:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+
+.tank{margin:0 16px 14px;background:#1E293B;border:1px solid #334155;border-radius:14px;padding:14px}
+.tank-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.tank-title{font-size:13px;font-weight:500;color:#94A3B8}
+.tank-pct{font-family:'Syne',sans-serif;font-size:20px;font-weight:800}
+.tank-bar{background:#0F172A;border-radius:10px;height:10px;overflow:hidden}
+.tank-fill{height:100%;border-radius:10px;transition:width .5s,background .5s}
+.tank-info{font-size:11px;color:#64748B;margin-top:6px}
+.tank-acts{display:flex;gap:8px;margin-top:12px}
+.tank-btn{flex:1;padding:9px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:none;text-align:center}
+.tank-refill{background:#FEF3C7;color:#92400E}
+.tank-upd{background:#1A56DB;color:#fff}
+
+.bnav{position:sticky;bottom:0;background:#1E293B;border-top:1px solid #334155;display:flex;padding:8px 0 14px}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 0;border:none;background:none}
+.nb i{font-size:20px;color:#475569}
+.nb span{font-size:9px;color:#475569;font-weight:600;letter-spacing:.3px}
+.nb.on i,.nb.on span{color:#4ADE80}
+
+.scroll{flex:1;overflow-y:auto;padding-top:6px}
+
+.empty{padding:40px 20px;text-align:center;color:#64748B;font-size:13px}
+.empty i{font-size:32px;color:#334155;margin-bottom:10px;display:block}
+
+.hdr{padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1E293B;background:#0F172A}
+.back{width:34px;height:34px;border-radius:9px;background:#1E293B;border:1px solid #334155;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.back i{font-size:17px;color:#94A3B8}
+.hdr-t{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff}
+
+.done-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;text-align:center}
+.done-ico{width:74px;height:74px;border-radius:50%;background:#DCFCE7;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.done-ico i{font-size:34px;color:#16A34A}
+
+.cash-card{background:#1C1A0A;border:1px solid #92400E;border-radius:14px;padding:16px;margin-bottom:14px;width:100%}
+.cash-amt{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#FBBF24;margin:6px 0 4px}
+.chk-row{display:flex;align-items:center;gap:10px;background:#0F172A;border-radius:10px;padding:11px 13px;margin-top:12px;cursor:pointer}
+.chk-box{width:20px;height:20px;border-radius:6px;border:2px solid #374151;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.chk-box.on{background:#16A34A;border-color:#16A34A}
+.chk-box i{font-size:11px;color:#fff;display:none}
+.chk-box.on i{display:block}
+
+.btn{padding:14px;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;width:100%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-g{background:#16A34A;color:#fff}
+.btn-ghost{background:#1E293B;color:#94A3B8;border:1px solid #334155}
+
+.login-screen{flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 24px}
+.login-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:6px;text-align:center}
+.login-sub{font-size:13px;color:#64748B;margin-bottom:30px;text-align:center}
+.login-inp{width:100%;padding:14px 16px;border:1.5px solid #334155;border-radius:10px;background:#1E293B;color:#fff;font-size:14px;outline:none;margin-bottom:12px}
+.login-inp:focus{border-color:#4ADE80}
+</style>
+</head>
+<body>
+
+<div id="connection-warn" class="connection-warn" style="display:none">⚙️ Demo mode — update Supabase keys in source</div>
+
+<!-- ════════ LOGIN ════════ -->
+<div class="screen active" id="s-login">
+  <div class="login-screen">
+    <div style="text-align:center;margin-bottom:30px">
+      <div style="width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,#1A56DB,#0EA5E9);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">
+        <i class="ti ti-droplet" style="font-size:30px;color:#fff"></i>
+      </div>
+      <div class="login-title">Driver Login</div>
+      <div class="login-sub">Rohit Water Works · Shamshabad</div>
+    </div>
+    <label style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;font-weight:700">Your phone number</label>
+    <input class="login-inp" id="login-phone" type="tel" placeholder="98XXXXXXXX" />
+    <button class="btn btn-g" onclick="login()" style="margin-top:8px">Continue <i class="ti ti-arrow-right"></i></button>
+    <div style="font-size:11px;color:#475569;text-align:center;margin-top:14px">Use the phone number registered by your office</div>
+  </div>
+</div>
+
+<!-- ════════ HOME ════════ -->
+<div class="screen" id="s-home">
+  <div class="online-bar">
+    <div>
+      <div class="ob-l">Driver</div>
+      <div class="ob-name" id="driver-name">—</div>
+      <div class="ob-status on" id="status-text">Online · Ready for jobs</div>
+    </div>
+    <div class="tog on" id="online-tog" onclick="toggleOnline()"><div class="tog-thumb"></div></div>
+  </div>
+
+  <div class="mets">
+    <div class="met">
+      <div class="met-l">Deliveries today</div>
+      <div class="met-v" id="met-today">0</div>
+      <div class="met-s" id="met-today-sub">Loading...</div>
+    </div>
+    <div class="met">
+      <div class="met-l">Rating</div>
+      <div class="met-v" id="met-rating">—</div>
+      <div class="met-s">this month</div>
+    </div>
+  </div>
+
+  <div class="cash-warn">
+    <i class="ti ti-cash"></i>
+    <div class="cash-warn-t">Collect <strong>cash from each customer</strong>. Hand all cash to office at end of day.</div>
+  </div>
+
+  <div class="scroll">
+    <div class="sec">New job requests</div>
+    <div id="incoming-jobs">
+      <div class="empty">
+        <i class="ti ti-bell-off"></i>
+        Waiting for new jobs...
+      </div>
+    </div>
+
+    <div class="sec">Current job</div>
+    <div id="current-job">
+      <div class="empty">
+        <i class="ti ti-truck"></i>
+        No active delivery
+      </div>
+    </div>
+
+    <div class="sec">Tanker status</div>
+    <div class="tank">
+      <div class="tank-h">
+        <div>
+          <div class="tank-title">Water level</div>
+          <div class="tank-info" id="tank-trips">~2 deliveries left</div>
+        </div>
+        <div class="tank-pct" id="tank-pct" style="color:#4ADE80">65%</div>
+      </div>
+      <div class="tank-bar"><div class="tank-fill" id="tank-fill" style="width:65%;background:linear-gradient(90deg,#16A34A,#4ADE80)"></div></div>
+      <div class="tank-acts">
+        <div class="tank-btn tank-refill" onclick="requestRefill()"><i class="ti ti-bell"></i> Request refill</div>
+        <div class="tank-btn tank-upd" onclick="updateTank()"><i class="ti ti-edit"></i> Update level</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bnav">
+    <button class="nb on" onclick="go('s-home')"><i class="ti ti-home"></i><span>HOME</span></button>
+    <button class="nb" onclick="go('s-jobs')"><i class="ti ti-list"></i><span>JOBS</span></button>
+    <button class="nb" onclick="logout()"><i class="ti ti-logout"></i><span>LOGOUT</span></button>
+  </div>
+</div>
+
+<!-- ════════ JOBS ════════ -->
+<div class="screen" id="s-jobs">
+  <div class="hdr">
+    <div class="back" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></div>
+    <div><div class="hdr-t">Today's Jobs</div></div>
+  </div>
+  <div class="scroll" id="jobs-list">
+    <div class="empty"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i>Loading...</div>
+  </div>
+  <div class="bnav">
+    <button class="nb" onclick="go('s-home')"><i class="ti ti-home"></i><span>HOME</span></button>
+    <button class="nb on"><i class="ti ti-list"></i><span>JOBS</span></button>
+    <button class="nb" onclick="logout()"><i class="ti ti-logout"></i><span>LOGOUT</span></button>
+  </div>
+</div>
+
+<!-- ════════ DELIVERY COMPLETE ════════ -->
+<div class="screen" id="s-done">
+  <div class="hdr">
+    <div class="back" onclick="go('s-home')"><i class="ti ti-arrow-left"></i></div>
+    <div><div class="hdr-t">Mark Delivery Complete</div></div>
+  </div>
+  <div class="done-screen">
+    <div class="done-ico"><i class="ti ti-droplet"></i></div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">Delivery done?</div>
+    <div style="font-size:12px;color:#64748B;margin-bottom:16px" id="done-customer">—</div>
+
+    <div class="cash-card" id="done-cash-card">
+      <div style="font-size:10px;color:#FDE68A;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Cash to collect</div>
+      <div class="cash-amt" id="done-amt">₹—</div>
+      <div style="font-size:11px;color:#92400E">Hand to office end of day</div>
+      <div class="chk-row" onclick="toggleCashCheck()">
+        <div class="chk-box" id="cash-check"><i class="ti ti-check"></i></div>
+        <span style="font-size:12px;color:#E2E8F0">I collected cash from customer</span>
+      </div>
+    </div>
+
+    <button class="btn btn-g" onclick="completeDelivery()"><i class="ti ti-check"></i> Mark complete</button>
+    <button class="btn btn-ghost" onclick="go('s-home')">Cancel</button>
+  </div>
+</div>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// ════════════════════════════════════════════════
+//  REPLACE THESE TWO VALUES
+// ════════════════════════════════════════════════
+const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_KEY = 'eyJhb...YOUR_ANON_KEY';
+// ════════════════════════════════════════════════
+
+const isDemo = SUPABASE_URL.includes('YOUR_PROJECT');
+if (isDemo) document.getElementById('connection-warn').style.display = 'block';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let driver = null;
+let currentJobToComplete = null;
+let cashCollected = false;
+
+window.go = function(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+};
+
+window.login = async function() {
+  const phoneInput = document.getElementById('login-phone').value.trim();
+  if (!phoneInput) return alert('Enter your phone number');
+
+  // Normalize to format used in DB (91xxxxxxxxxx)
+  const phone = phoneInput.replace(/\s|\+|-/g, '');
+  const dbPhone = phone.startsWith('91') ? phone : '91' + phone.slice(-10);
+
+  if (isDemo) {
+    driver = { id: 'demo', name: 'Muthu Raj', vehicle_number: 'TS-07-AB-1234',
+               vehicle_capacity_kl: 5, current_tank_pct: 65, is_online: true, rating: 4.8 };
+    localStorage.setItem('driver_phone', dbPhone);
+    showHome();
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('drivers').select('*').eq('phone', dbPhone).maybeSingle();
+
+  if (error || !data) {
+    alert('Driver not found. Check your phone number or contact office.');
+    return;
+  }
+
+  driver = data;
+  localStorage.setItem('driver_phone', dbPhone);
+  showHome();
+};
+
+window.logout = function() {
+  localStorage.removeItem('driver_phone');
+  driver = null;
+  go('s-login');
+};
+
+async function showHome() {
+  document.getElementById('driver-name').textContent = driver.name;
+  document.getElementById('met-rating').textContent = (driver.rating || 5.0).toFixed(1) + ' ★';
+  updateTankUI(driver.current_tank_pct);
+
+  go('s-home');
+
+  if (!isDemo) {
+    await loadTodayDeliveries();
+    await loadCurrentJob();
+    await loadIncomingJobs();
+    setupRealtime();
+  } else {
+    document.getElementById('met-today').textContent = '4';
+    document.getElementById('met-today-sub').textContent = '4 completed';
+    // Show a demo incoming job
+    showDemoIncomingJob();
+  }
+}
+
+async function loadTodayDeliveries() {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from('bookings').select('id').eq('driver_id', driver.id)
+    .eq('scheduled_date', today).eq('booking_status', 'completed');
+
+  document.getElementById('met-today').textContent = data?.length || 0;
+  document.getElementById('met-today-sub').textContent = (data?.length || 0) + ' completed';
+}
+
+async function loadCurrentJob() {
+  const { data } = await supabase
+    .from('bookings')
+    .select('*, customers(name, phone), addresses(area, full_address, landmark)')
+    .eq('driver_id', driver.id)
+    .in('booking_status', ['assigned', 'in_progress'])
+    .order('scheduled_time')
+    .limit(1)
+    .maybeSingle();
+
+  renderCurrentJob(data);
+}
+
+function renderCurrentJob(job) {
+  const container = document.getElementById('current-job');
+  if (!job) {
+    container.innerHTML = '<div class="empty"><i class="ti ti-truck"></i>No active delivery</div>';
+    return;
+  }
+
+  const cashRow = job.payment_method === 'cod'
+    ? `<div class="cj-row"><div class="cj-ico"><i class="ti ti-cash"></i></div><div><div class="cj-key">Cash to collect</div><div class="cj-val cash">₹${job.total_amount} from customer</div></div></div>`
+    : `<div class="cj-row"><div class="cj-ico"><i class="ti ti-check"></i></div><div><div class="cj-key">Payment</div><div class="cj-val nocash">Already paid online ✓</div></div></div>`;
+
+  container.innerHTML = `
+    <div class="cj">
+      <div class="cj-head">
+        <span class="cj-title">In progress · #RW${job.id}</span>
+        <span class="cj-badge">Active</span>
+      </div>
+      <div class="cj-body">
+        <div class="cj-row"><div class="cj-ico"><i class="ti ti-user"></i></div><div><div class="cj-key">Customer</div><div class="cj-val">${job.customers.name}</div></div></div>
+        <div class="cj-row"><div class="cj-ico"><i class="ti ti-map-pin"></i></div><div><div class="cj-key">Location</div><div class="cj-val">${job.addresses.area}</div></div></div>
+        <div class="cj-row"><div class="cj-ico"><i class="ti ti-droplet"></i></div><div><div class="cj-key">Tanker</div><div class="cj-val">${job.tanker_size_kl} KL · ${formatTime(job.scheduled_time)}</div></div></div>
+        ${cashRow}
+      </div>
+      <div class="cj-acts">
+        <button class="cj-btn cj-call" onclick="window.location.href='tel:${job.customers.phone}'"><i class="ti ti-phone"></i> Call</button>
+        <button class="cj-btn cj-nav" onclick="navigateTo('${encodeURIComponent(job.addresses.full_address)}')"><i class="ti ti-map-pin"></i> Navigate</button>
+      </div>
+      <button class="cj-done" onclick="openComplete(${job.id})">Mark delivery complete</button>
+    </div>
+  `;
+}
+
+async function loadIncomingJobs() {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from('bookings')
+    .select('*, customers(name), addresses(area)')
+    .is('driver_id', null)
+    .eq('booking_status', 'pending')
+    .eq('scheduled_date', today)
+    .eq('tanker_size_kl', driver.vehicle_capacity_kl)
+    .limit(1);
+
+  const container = document.getElementById('incoming-jobs');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="empty"><i class="ti ti-bell-off"></i>Waiting for new jobs...</div>';
+    return;
+  }
+
+  const job = data[0];
+  const paymentLine = job.payment_method === 'cod'
+    ? `<div class="job-rv" style="color:#FCD34D">Cash ₹${job.total_amount} — collect from customer</div>`
+    : `<div class="job-rv" style="color:#4ADE80">Already paid ₹${job.total_amount} via UPI</div>`;
+
+  container.innerHTML = `
+    <div class="job-card">
+      <div class="job-pulse"></div>
+      <div class="job-head">
+        <div class="job-tag"><i class="ti ti-bell-ringing" style="font-size:10px"></i> NEW JOB</div>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#FCD34D" id="timer-${job.id}">30</div>
+      </div>
+      <div class="job-body">
+        <div class="job-row"><div class="job-ri"><i class="ti ti-user"></i></div><div><div class="job-rl">CUSTOMER</div><div class="job-rv">${job.customers.name}</div></div></div>
+        <div class="job-row"><div class="job-ri"><i class="ti ti-map-pin"></i></div><div><div class="job-rl">LOCATION</div><div class="job-rv">${job.addresses.area}</div></div></div>
+        <div class="job-row"><div class="job-ri"><i class="ti ti-droplet"></i></div><div><div class="job-rl">TANKER</div><div class="job-rv">${job.tanker_size_kl} KL · ${formatTime(job.scheduled_time)}</div></div></div>
+        <div class="job-row" style="margin-bottom:12px"><div class="job-ri"><i class="ti ti-cash"></i></div><div><div class="job-rl">PAYMENT</div>${paymentLine}</div></div>
+        <div class="job-acts">
+          <div class="ja-no" onclick="rejectJob(${job.id})">✕ Decline</div>
+          <div class="ja-yes" onclick="acceptJob(${job.id})">✓ Accept</div>
+        </div>
+      </div>
+    </div>
+  `;
+  startTimer(job.id);
+}
+
+function showDemoIncomingJob() {
+  document.getElementById('incoming-jobs').innerHTML = `
+    <div class="job-card">
+      <div class="job-pulse"></div>
+      <div class="job-head">
+        <div class="job-tag"><i class="ti ti-bell-ringing" style="font-size:10px"></i> NEW JOB</div>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#FCD34D" id="timer-demo">30</div>
+      </div>
+      <div class="job-body">
+        <div class="job-row"><div class="job-ri"><i class="ti ti-user"></i></div><div><div class="job-rl">CUSTOMER</div><div class="job-rv">Kavitha S.</div></div></div>
+        <div class="job-row"><div class="job-ri"><i class="ti ti-map-pin"></i></div><div><div class="job-rl">LOCATION</div><div class="job-rv">Rajiv Nagar · 2.3 km</div></div></div>
+        <div class="job-row"><div class="job-ri"><i class="ti ti-droplet"></i></div><div><div class="job-rl">TANKER</div><div class="job-rv">5 KL · 10 AM</div></div></div>
+        <div class="job-row" style="margin-bottom:12px"><div class="job-ri"><i class="ti ti-cash"></i></div><div><div class="job-rl">PAYMENT</div><div class="job-rv" style="color:#FCD34D">Cash ₹700 — collect from customer</div></div></div>
+        <div class="job-acts">
+          <div class="ja-no" onclick="alert('Demo: declined')">✕ Decline</div>
+          <div class="ja-yes" onclick="alert('Demo: accepted')">✓ Accept</div>
+        </div>
+      </div>
+    </div>
+  `;
+  startTimer('demo');
+}
+
+const timers = {};
+function startTimer(id) {
+  let v = 30;
+  if (timers[id]) clearInterval(timers[id]);
+  timers[id] = setInterval(() => {
+    v--;
+    const el = document.getElementById('timer-' + id);
+    if (el) {
+      el.textContent = v;
+      el.style.color = v <= 10 ? '#FCA5A5' : '#FCD34D';
+    }
+    if (v <= 0) { clearInterval(timers[id]); }
+  }, 1000);
+}
+
+window.acceptJob = async function(bookingId) {
+  if (isDemo) { alert('Demo: job accepted'); return; }
+
+  const { error } = await supabase
+    .from('bookings')
+    .update({ driver_id: driver.id, booking_status: 'in_progress' })
+    .eq('id', bookingId)
+    .is('driver_id', null);
+
+  if (error) return alert('Error: ' + error.message);
+
+  await loadCurrentJob();
+  await loadIncomingJobs();
+};
+
+window.rejectJob = async function(bookingId) {
+  document.getElementById('incoming-jobs').innerHTML = '<div class="empty"><i class="ti ti-bell-off"></i>Waiting for next job...</div>';
+  // In real system, this would notify admin to assign another driver
+};
+
+window.openComplete = async function(bookingId) {
+  if (isDemo) {
+    currentJobToComplete = { id: 'demo', total_amount: 700, payment_method: 'cod', customers: { name: 'Lakshmi A.' } };
+  } else {
+    const { data } = await supabase
+      .from('bookings').select('*, customers(name)').eq('id', bookingId).single();
+    currentJobToComplete = data;
+  }
+
+  document.getElementById('done-customer').textContent = currentJobToComplete.customers.name;
+  document.getElementById('done-amt').textContent = '₹' + currentJobToComplete.total_amount;
+
+  // Hide cash card if already paid via UPI
+  if (currentJobToComplete.payment_method === 'upi') {
+    document.getElementById('done-cash-card').style.display = 'none';
+    cashCollected = true; // auto-true since paid online
+  } else {
+    document.getElementById('done-cash-card').style.display = 'block';
+    cashCollected = false;
+    document.getElementById('cash-check').classList.remove('on');
+  }
+
+  go('s-done');
+};
+
+window.toggleCashCheck = function() {
+  cashCollected = !cashCollected;
+  document.getElementById('cash-check').classList.toggle('on', cashCollected);
+};
+
+window.completeDelivery = async function() {
+  if (currentJobToComplete.payment_method === 'cod' && !cashCollected) {
+    return alert('Please confirm you collected the cash from the customer');
+  }
+
+  if (isDemo) {
+    alert('Demo: delivery marked complete');
+    go('s-home');
+    return;
+  }
+
+  const updates = {
+    booking_status: 'completed',
+    completed_at: new Date().toISOString()
+  };
+  if (currentJobToComplete.payment_method === 'cod') {
+    updates.cash_collected = true;
+    updates.cash_collected_at = new Date().toISOString();
+  }
+
+  const { error } = await supabase.from('bookings').update(updates).eq('id', currentJobToComplete.id);
+  if (error) return alert('Error: ' + error.message);
+
+  // Log to cash ledger if COD
+  if (currentJobToComplete.payment_method === 'cod') {
+    await supabase.from('cash_ledger').insert({
+      driver_id: driver.id,
+      booking_id: currentJobToComplete.id,
+      amount: currentJobToComplete.total_amount
+    });
+  }
+
+  // Update tank level (subtract ~50% per 5KL trip)
+  const newTank = Math.max(0, driver.current_tank_pct - 50);
+  await supabase.from('drivers').update({
+    current_tank_pct: newTank,
+    total_deliveries: (driver.total_deliveries || 0) + 1
+  }).eq('id', driver.id);
+
+  driver.current_tank_pct = newTank;
+  updateTankUI(newTank);
+  await loadTodayDeliveries();
+  await loadCurrentJob();
+  go('s-home');
+};
+
+window.toggleOnline = async function() {
+  const newState = !driver.is_online;
+  driver.is_online = newState;
+  document.getElementById('online-tog').className = 'tog ' + (newState ? 'on' : 'off');
+  document.getElementById('status-text').textContent = newState ? 'Online · Ready for jobs' : 'Offline';
+  document.getElementById('status-text').className = 'ob-status ' + (newState ? 'on' : 'off');
+
+  if (isDemo) return;
+  await supabase.from('drivers').update({ is_online: newState }).eq('id', driver.id);
+};
+
+window.updateTank = async function() {
+  const newVal = prompt('Enter current tank level (0-100):', driver.current_tank_pct);
+  if (newVal === null) return;
+  const pct = Math.max(0, Math.min(100, parseInt(newVal) || 0));
+  driver.current_tank_pct = pct;
+  updateTankUI(pct);
+
+  if (!isDemo) {
+    await supabase.from('drivers').update({ current_tank_pct: pct }).eq('id', driver.id);
+  }
+};
+
+window.requestRefill = async function() {
+  if (!confirm('Send refill request to depot?')) return;
+  if (isDemo) { alert('Demo: refill requested'); return; }
+  alert('Refill request sent to depot via WhatsApp!');
+};
+
+function updateTankUI(pct) {
+  const color = pct > 60 ? '#4ADE80' : pct > 25 ? '#FBBF24' : '#FCA5A5';
+  const grad = pct > 60 ? 'linear-gradient(90deg,#16A34A,#4ADE80)' :
+               pct > 25 ? 'linear-gradient(90deg,#D97706,#FBBF24)' :
+                          'linear-gradient(90deg,#DC2626,#F87171)';
+  const trips = Math.floor(pct / 50);
+
+  document.getElementById('tank-pct').textContent = pct + '%';
+  document.getElementById('tank-pct').style.color = color;
+  document.getElementById('tank-fill').style.width = pct + '%';
+  document.getElementById('tank-fill').style.background = grad;
+  document.getElementById('tank-trips').textContent = `~${trips} deliveries left`;
+}
+
+function formatTime(t) {
+  if (!t) return '—';
+  const [h, m] = t.split(':');
+  const hour = parseInt(h);
+  return `${hour > 12 ? hour - 12 : hour}:${m} ${hour < 12 ? 'AM' : 'PM'}`;
+}
+
+window.navigateTo = function(addr) {
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${addr}`, '_blank');
+};
+
+function setupRealtime() {
+  if (isDemo) return;
+  supabase
+    .channel('driver-jobs')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'bookings' },
+      () => { loadIncomingJobs(); loadCurrentJob(); loadTodayDeliveries(); }
+    )
+    .subscribe();
+}
+
+// Auto-login if previously logged in
+const savedPhone = localStorage.getItem('driver_phone');
+if (savedPhone) {
+  document.getElementById('login-phone').value = savedPhone.slice(-10);
+  login();
+}
+</script>
+
+</body>
+</html>
