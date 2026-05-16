@@ -334,6 +334,7 @@ async function showHome() {
     await loadCurrentJob();
     await loadIncomingJobs();
     setupRealtime();
+    startLocationTracking();
   } else {
     document.getElementById('met-today').textContent = '4';
     document.getElementById('met-today-sub').textContent = '4 completed';
@@ -645,6 +646,35 @@ const savedPhone = localStorage.getItem('driver_phone');
 if (savedPhone) {
   document.getElementById('login-phone').value = savedPhone.slice(-10);
   login();
+}
+function startLocationTracking() {
+  if (isDemo || !driver || !navigator.geolocation) return;
+
+  navigator.geolocation.watchPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      driver.current_lat = lat;
+      driver.current_lng = lng;
+
+      await supabase
+        .from('drivers')
+        .update({
+          current_lat: lat,
+          current_lng: lng
+        })
+        .eq('id', driver.id);
+    },
+    (error) => {
+      console.log('Location permission/error:', error.message);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 30000,
+      timeout: 15000
+    }
+  );
 }
 </script>
 
